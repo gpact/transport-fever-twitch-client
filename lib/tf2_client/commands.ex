@@ -53,7 +53,7 @@ defmodule TF2Client.Commands do
     case String.split(rest, ~r/\s+/, parts: 2, trim: true) do
       [carrier, cargo] ->
         carrier = carrier |> String.trim() |> String.upcase()
-        cargo = cargo |> String.trim() |> String.upcase()
+        cargo = cargo |> String.trim() |> String.upcase() |> normalize_cargo()
 
         if carrier in @valid_carriers do
           {:ok, {kind, carrier, cargo}}
@@ -71,5 +71,7 @@ defmodule TF2Client.Commands do
         {:error, "usage: #{usage}"}
     end
   end
-end
 
+  defp normalize_cargo("PASSENGER"), do: "PASSENGERS"
+  defp normalize_cargo(cargo), do: cargo
+end

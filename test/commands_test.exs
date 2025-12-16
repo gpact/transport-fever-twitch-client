@@ -23,10 +23,10 @@ defmodule TF2Client.CommandsTest do
   test "parses line and vehicle" do
     assert {:ok, {:line, "ROAD", "STONE"}} = Commands.parse("!line road stone")
     assert {:ok, {:vehicle, "RAIL", "PASSENGERS"}} = Commands.parse("!vehicle RAIL passengers")
+    assert {:ok, {:vehicle, "RAIL", "PASSENGERS"}} = Commands.parse("!vehicle RAIL passenger")
   end
 
   test "validates carriers" do
     assert {:error, _} = Commands.parse("!line space stone")
   end
 end
-
