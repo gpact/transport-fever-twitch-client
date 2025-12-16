@@ -32,6 +32,14 @@ Start the game with the mod enabled so it can create/update `gameState.json` in 
 
 Valid carriers: `AIR`, `RAIL`, `ROAD`, `WATER`, `TRAM`.
 
+## Local simulator (no Twitch)
+
+Run an interactive shell that simulates chat messages and prints bot replies:
+
+`mix tf2.sim`
+
+If `TF2_INTEGRATION_GAME_FILES` is not set, it uses a fresh temp folder and prints the path on start.
+
 ## File protocol (with the game mod)
 
 - Bot writes: `#{order_id}.lua` (Lua `return` table with `schema_version = 1`) and appends `order_id` to `requests.txt`.

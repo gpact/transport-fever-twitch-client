@@ -6,6 +6,7 @@ defmodule TF2Client.ResponsePoller do
   alias TF2Client.GameBridge
   alias TF2Client.RequestTracker
   alias TF2Client.Response
+  alias TF2Client.Chat
 
   @interval_ms 1_000
 
@@ -38,7 +39,7 @@ defmodule TF2Client.ResponsePoller do
            {:ok, json} <- File.read(response_path),
            {:ok, parsed} <- Response.parse(json),
            message when is_binary(message) <- Response.format(parsed) do
-        TF2Client.Bot.say(channel, message)
+        Chat.send(channel, message)
         File.rm(response_path)
 
         if parsed.completed do
