@@ -12,7 +12,7 @@ defmodule TF2Client.Application do
       case TF2Client.TwitchConfig.from_env() do
         {:ok, bot_config} ->
           [
-            {TMI.Supervisor, bot_config},
+            {TF2Client.TwitchSupervisor, bot_config},
             TF2Client.RequestTracker,
             TF2Client.ResponsePoller
           ]

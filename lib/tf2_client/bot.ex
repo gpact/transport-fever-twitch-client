@@ -8,6 +8,11 @@ defmodule TF2Client.Bot do
 
   @impl TMI.Handler
   def handle_message(message, sender, chat) do
+    handle_message(message, sender, chat, %{})
+  end
+
+  @impl TMI.Handler
+  def handle_message(message, sender, chat, _tags) do
     case Commands.parse(message) do
       :ignore ->
         :ok
@@ -23,4 +28,3 @@ defmodule TF2Client.Bot do
     end
   end
 end
-
