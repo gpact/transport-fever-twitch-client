@@ -4,13 +4,26 @@ defmodule TF2Client.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Starts a worker by calling: TF2Client.Worker.start_link(arg)
-      # {TF2Client.Worker, arg}
-    ]
+    children =
+      case TF2Client.TwitchConfig.from_env() do
+        {:ok, bot_config} ->
+          [
+            {TMI.Supervisor, bot_config},
+            TF2Client.RequestTracker,
+            TF2Client.ResponsePoller
+          ]
+
+        {:error, reason} ->
+          if Mix.env() != :test do
+            Logger.warning("Twitch bot disabled: #{reason}")
+          end
+
+          []
+      end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
