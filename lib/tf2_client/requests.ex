@@ -35,30 +35,15 @@ defmodule TF2Client.Requests do
   end
 
   def handle_chat_command({:profit}, sender, _chat) do
-    case GameState.read() do
-      {:ok, game_state} ->
-        case GameState.profit_for_username(game_state, sender) do
-          {:ok, profit} when is_integer(profit) and profit >= 0 ->
-            {:reply, "@#{sender} your total profit so far is #{format_integer(profit)}."}
+    key = {:user, normalize_username(sender), :profit}
 
-          {:ok, profit} when is_integer(profit) ->
-            {:reply, "@#{sender} your total profit so far is #{format_integer(profit)} (net loss)."}
+    case RateLimiter.check(key, @stats_cooldown_rule) do
+      :deny ->
+        Logger.info("Rate limit reached: profit user=#{sender}")
+        :ignore
 
-          {:error, :profit_unavailable} ->
-            {:reply, "@#{sender} I don't have profit data for you yet."}
-        end
-
-      {:error, :game_state_missing} ->
-        {:reply,
-         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
-
-      {:error, :game_state_invalid} ->
-        {:reply,
-         "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
-
-      {:error, {:file_error, reason}} ->
-        Logger.warning("Failed to read game state for profit: #{inspect(reason)}")
-        {:reply, "@#{sender} I couldn't read the game stats due to a setup issue. Please try again in a moment."}
+      :allow ->
+        profit_reply(sender)
     end
   end
 
@@ -145,6 +130,34 @@ defmodule TF2Client.Requests do
   end
 
   def handle_chat_command(_other, _sender, _chat), do: :ignore
+
+  defp profit_reply(sender) do
+    case GameState.read() do
+      {:ok, game_state} ->
+        case GameState.profit_for_username(game_state, sender) do
+          {:ok, profit} when is_integer(profit) and profit >= 0 ->
+            {:reply, "@#{sender} your total profit so far is #{format_integer(profit)}."}
+
+          {:ok, profit} when is_integer(profit) ->
+            {:reply, "@#{sender} your total profit so far is #{format_integer(profit)} (net loss)."}
+
+          {:error, :profit_unavailable} ->
+            {:reply, "@#{sender} I don't have profit data for you yet."}
+        end
+
+      {:error, :game_state_missing} ->
+        {:reply,
+         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+
+      {:error, :game_state_invalid} ->
+        {:reply,
+         "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
+
+      {:error, {:file_error, reason}} ->
+        Logger.warning("Failed to read game state for profit: #{inspect(reason)}")
+        {:reply, "@#{sender} I couldn't read the game stats due to a setup issue. Please try again in a moment."}
+    end
+  end
 
   defp vehicles_owned_reply(sender) do
     case GameState.read() do
