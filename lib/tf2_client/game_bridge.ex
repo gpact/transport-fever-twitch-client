@@ -26,9 +26,13 @@ defmodule TF2Client.GameBridge do
   def read_save_uuid do
     case File.read(game_state_path()) do
       {:ok, json} ->
-        case extract_json_string(json, "save_uuid") do
-          nil -> {:error, :save_uuid_missing}
-          save_uuid -> {:ok, save_uuid}
+        with {:ok, %{} = decoded} <- Jason.decode(json) do
+          case Map.get(decoded, "save_uuid") do
+            value when is_binary(value) and value != "" -> {:ok, value}
+            _ -> {:error, :save_uuid_missing}
+          end
+        else
+          _ -> {:error, :game_state_invalid}
         end
 
       {:error, :enoent} ->
@@ -75,27 +79,4 @@ defmodule TF2Client.GameBridge do
     :crypto.strong_rand_bytes(16)
     |> Base.encode16(case: :lower)
   end
-
-  defp extract_json_string(json, key) when is_binary(json) and is_binary(key) do
-    cond do
-      Regex.match?(~r/"#{Regex.escape(key)}"\s*:\s*null/, json) ->
-        nil
-
-      true ->
-        case Regex.run(~r/"#{Regex.escape(key)}"\s*:\s*"((?:\\.|[^"\\])*)"/, json) do
-          [_, raw] -> unescape_json_string(raw)
-          _ -> nil
-        end
-    end
-  end
-
-  defp unescape_json_string(raw) do
-    raw
-    |> String.replace("\\\\", "\\")
-    |> String.replace("\\n", "\n")
-    |> String.replace("\\r", "\r")
-    |> String.replace("\\t", "\t")
-    |> String.replace("\\\"", "\"")
-  end
 end
-

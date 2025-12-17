@@ -63,6 +63,10 @@ defmodule TF2Client.Requests do
         {:reply,
          "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
 
+      {:error, :game_state_invalid} ->
+        {:reply,
+         "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
+
       {:error, {:file_error, reason}} ->
         Logger.warning("Failed to submit request to game files: #{inspect(reason)}")
         {:reply, "@#{sender} I couldn't send that to the game due to a setup issue. Please try again in a moment."}

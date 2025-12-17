@@ -2,13 +2,22 @@ defmodule TF2Client.Response do
   @moduledoc false
 
   def parse(json) when is_binary(json) do
-    %{
-      username: extract_string(json, "username"),
-      type: extract_string(json, "type"),
-      completed: extract_bool(json, "completed"),
-      error: extract_string(json, "error")
-    }
-    |> then(&{:ok, &1})
+    with {:ok, %{} = decoded} <- Jason.decode(json) do
+      username = decoded |> Map.get("username") |> normalize_optional_string()
+      type = decoded |> Map.get("type") |> normalize_optional_string()
+      error = decoded |> Map.get("error") |> normalize_optional_string()
+      completed = Map.get(decoded, "completed") == true
+
+      {:ok,
+       %{
+         username: username,
+         type: type,
+         completed: completed,
+         error: error
+       }}
+    else
+      _ -> {:error, :invalid_json}
+    end
   end
 
   def format(%{username: username, type: type, completed: false, error: nil})
@@ -28,34 +37,12 @@ defmodule TF2Client.Response do
 
   def format(_), do: nil
 
-  defp extract_bool(json, key) do
-    case Regex.run(~r/"#{Regex.escape(key)}"\s*:\s*(true|false)/, json) do
-      [_, "true"] -> true
-      [_, "false"] -> false
-      _ -> false
+  defp normalize_optional_string(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
     end
   end
 
-  defp extract_string(json, key) do
-    cond do
-      Regex.match?(~r/"#{Regex.escape(key)}"\s*:\s*null/, json) ->
-        nil
-
-      true ->
-        case Regex.run(~r/"#{Regex.escape(key)}"\s*:\s*"((?:\\.|[^"\\])*)"/, json) do
-          [_, raw] -> unescape_json_string(raw)
-          _ -> nil
-        end
-    end
-  end
-
-  defp unescape_json_string(raw) do
-    raw
-    |> String.replace("\\\\", "\\")
-    |> String.replace("\\n", "\n")
-    |> String.replace("\\r", "\r")
-    |> String.replace("\\t", "\t")
-    |> String.replace("\\\"", "\"")
-  end
+  defp normalize_optional_string(_), do: nil
 end
-

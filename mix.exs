@@ -22,7 +22,8 @@ defmodule TF2Client.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:tmi, "~> 0.7.0"}
+      {:tmi, "~> 0.7.0"},
+      {:jason, "~> 1.4"}
     ]
   end
 end
