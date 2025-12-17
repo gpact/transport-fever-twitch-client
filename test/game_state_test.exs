@@ -52,4 +52,16 @@ defmodule TF2Client.GameStateTest do
 
     assert {:ok, 2} = GameState.vehicles_owned_count(game_state, "alice")
   end
+
+  test "ranks top players by profit" do
+    game_state = %{
+      "players_income" => %{
+        "alice" => 100,
+        "bob" => -50,
+        "carol" => 200
+      }
+    }
+
+    assert [{"carol", 200}, {"alice", 100}] = GameState.top_players_by_profit(game_state, 2)
+  end
 end

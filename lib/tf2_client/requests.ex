@@ -84,6 +84,33 @@ defmodule TF2Client.Requests do
     end
   end
 
+  def handle_chat_command({:profit_rankings}, sender, _chat) do
+    case GameState.read() do
+      {:ok, game_state} ->
+        rankings = GameState.top_players_by_profit(game_state, 10)
+
+        case rankings do
+          [] ->
+            {:reply, "@#{sender} I don't have profit data yet."}
+
+          rankings ->
+            {:reply, "@#{sender} top profits: " <> format_profit_rankings(rankings)}
+        end
+
+      {:error, :game_state_missing} ->
+        {:reply,
+         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+
+      {:error, :game_state_invalid} ->
+        {:reply,
+         "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
+
+      {:error, {:file_error, reason}} ->
+        Logger.warning("Failed to read game state for profit rankings: #{inspect(reason)}")
+        {:reply, "@#{sender} I couldn't read the game stats due to a setup issue. Please try again in a moment."}
+    end
+  end
+
   def handle_chat_command({:claim, company_name}, sender, chat) do
     submit("COMPANY", sender, chat, %{company_name: company_name})
   end
@@ -194,5 +221,14 @@ defmodule TF2Client.Requests do
       |> String.reverse()
 
     sign <> chunks
+  end
+
+  defp format_profit_rankings(rankings) when is_list(rankings) do
+    rankings
+    |> Enum.with_index(1)
+    |> Enum.map(fn {{username, profit}, index} ->
+      "#{index}) #{username}: #{format_integer(profit)}"
+    end)
+    |> Enum.join(" • ")
   end
 end

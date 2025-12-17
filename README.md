@@ -30,6 +30,7 @@ Start the game with the mod enabled so it can create/update `gameState.json` in 
 - `!vehicle <carrier> <cargo>` → purchase/assign a vehicle
 - `!profit` → show your total profit
 - `!vehicles` → show how many vehicles you own
+- `!rank` → show top players by profit
 - `!carriers` → list valid carrier types
 - `!cargo` → list valid cargo types
 - `!help` → show help

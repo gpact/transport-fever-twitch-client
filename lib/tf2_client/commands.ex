@@ -14,7 +14,8 @@ defmodule TF2Client.Commands do
       "!carriers",
       "!cargo",
       "!profit",
-      "!vehicles"
+      "!vehicles",
+      "!rank"
     ]
   end
 
@@ -52,6 +53,9 @@ defmodule TF2Client.Commands do
 
       [value] when value in ["vehicles", "fleet"] ->
         {:ok, {:vehicles_owned}}
+
+      [value] when value in ["rank", "ranks", "leaderboard", "top"] ->
+        {:ok, {:profit_rankings}}
 
       ["claim"] ->
         {:ok, {:claim, nil}}

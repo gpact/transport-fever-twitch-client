@@ -16,6 +16,7 @@ defmodule TF2Client.CommandsTest do
   test "parses stats commands" do
     assert {:ok, {:profit}} = Commands.parse("!profit")
     assert {:ok, {:vehicles_owned}} = Commands.parse("!vehicles")
+    assert {:ok, {:profit_rankings}} = Commands.parse("!rank")
   end
 
   test "parses claim and town" do

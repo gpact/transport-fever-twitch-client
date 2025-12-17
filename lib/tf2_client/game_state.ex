@@ -16,6 +16,23 @@ defmodule TF2Client.GameState do
     end
   end
 
+  def top_players_by_profit(%{} = game_state, limit) when is_integer(limit) and limit > 0 do
+    usernames = profit_usernames(game_state)
+
+    profits =
+      Enum.reduce(usernames, [], fn username, acc ->
+        case profit_for_username(game_state, username) do
+          {:ok, profit} when is_integer(profit) -> [{username, profit} | acc]
+          _ -> acc
+        end
+      end)
+
+    sorted = Enum.sort_by(profits, fn {_username, profit} -> profit end, :desc)
+    Enum.take(sorted, limit)
+  end
+
+  def top_players_by_profit(_game_state, _limit), do: []
+
   def profit_for_username(%{} = game_state, username) when is_binary(username) do
     username = String.downcase(username)
 
@@ -46,6 +63,25 @@ defmodule TF2Client.GameState do
       _ -> {:error, :game_state_invalid}
     end
   end
+
+  defp profit_usernames(game_state) when is_map(game_state) do
+    usernames = MapSet.new()
+    usernames = merge_usernames(usernames, Map.get(game_state, "players_income"))
+    usernames = merge_usernames(usernames, Map.get(game_state, "companies"))
+    MapSet.to_list(usernames)
+  end
+
+  defp merge_usernames(usernames, %{} = map) do
+    Enum.reduce(map, usernames, fn
+      {username, _value}, usernames when is_binary(username) ->
+        MapSet.put(usernames, String.downcase(username))
+
+      _entry, usernames ->
+        usernames
+    end)
+  end
+
+  defp merge_usernames(usernames, _), do: usernames
 
   defp profit_from_players_income(%{"players_income" => %{} = players_income}, username) do
     case fetch_case_insensitive(players_income, username) do
