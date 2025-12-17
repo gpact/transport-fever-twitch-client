@@ -1,7 +1,20 @@
 defmodule TF2Client.Commands do
   @moduledoc false
 
-  @valid_carriers ~w(AIR RAIL ROAD WATER TRAM)
+  @command_flag "!"
+
+  @valid_carriers Enum.map(TF2Client.Game.carrier_types(), &String.upcase(to_string(&1)))
+
+  def examples do
+    [
+      "!claim [company name]",
+      "!town [name]",
+      "!line <carrier> <cargo>",
+      "!vehicle <carrier> <cargo>",
+      "!carriers",
+      "!cargo"
+    ]
+  end
 
   def parse(message) when is_binary(message) do
     message = String.trim(message)
@@ -10,11 +23,11 @@ defmodule TF2Client.Commands do
       message == "" ->
         :ignore
 
-      not String.starts_with?(message, "!") ->
+      not String.starts_with?(message, @command_flag) ->
         :ignore
 
       true ->
-        do_parse(String.trim_leading(message, "!"))
+        do_parse(String.trim_leading(message, @command_flag))
     end
   end
 
@@ -25,6 +38,12 @@ defmodule TF2Client.Commands do
 
       ["help"] ->
         {:ok, {:help}}
+
+      [value] when value in ["carrier", "carriers"] ->
+        {:ok, {:carriers}}
+
+      [value] when value in ["cargo", "cargos"] ->
+        {:ok, {:cargo}}
 
       ["claim"] ->
         {:ok, {:claim, nil}}
@@ -45,7 +64,7 @@ defmodule TF2Client.Commands do
         parse_carrier_cargo(:vehicle, rest)
 
       [unknown | _] ->
-        {:error, "unknown command !#{unknown}. Try !help"}
+        {:error, "unknown command #{@command_flag}#{unknown}. Try !help"}
     end
   end
 
