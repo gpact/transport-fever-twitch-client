@@ -64,4 +64,16 @@ defmodule TF2Client.GameStateTest do
 
     assert [{"carol", 200}, {"alice", 100}] = GameState.top_players_by_profit(game_state, 2)
   end
+
+  test "detects one-time claim and town purchase" do
+    game_state = %{
+      "companies" => %{"Alice" => %{}},
+      "owned_towns" => %{"1" => "alice"}
+    }
+
+    assert GameState.company_claimed?(game_state, "alice")
+    assert GameState.town_purchased?(game_state, "alice")
+    refute GameState.company_claimed?(game_state, "bob")
+    refute GameState.town_purchased?(game_state, "bob")
+  end
 end

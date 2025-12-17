@@ -3,6 +3,36 @@ defmodule TF2Client.GameState do
 
   alias TF2Client.GameBridge
 
+  def company_claimed?(%{} = game_state, username) when is_binary(username) do
+    username = String.downcase(username)
+
+    case Map.get(game_state, "companies") do
+      %{} = companies ->
+        case fetch_case_insensitive(companies, username) do
+          {:ok, %{} = _company} -> true
+          _ -> false
+        end
+
+      _ ->
+        false
+    end
+  end
+
+  def town_purchased?(%{} = game_state, username) when is_binary(username) do
+    username = String.downcase(username)
+
+    case Map.get(game_state, "owned_towns") do
+      %{} = owned_towns ->
+        Enum.any?(owned_towns, fn
+          {_town_id, owner} when is_binary(owner) -> String.downcase(owner) == username
+          _ -> false
+        end)
+
+      _ ->
+        false
+    end
+  end
+
   def read do
     case File.read(GameBridge.game_state_path()) do
       {:ok, json} ->

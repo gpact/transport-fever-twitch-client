@@ -11,7 +11,16 @@ defmodule TF2Client.Requests do
 
   alias TF2Client.GameBridge
   alias TF2Client.GameState
+  alias TF2Client.RateLimiter
   alias TF2Client.RequestTracker
+
+  @purchase_rate_rule %{
+    cooldown_seconds: 5 * 60,
+    window_seconds: 60 * 60,
+    max_in_window: 3
+  }
+
+  @stats_cooldown_rule %{cooldown_seconds: 60}
 
   def handle_chat_command({:help}, _sender, _chat) do
     {:reply, "Commands: #{Enum.join(@available_command_examples, " • ")}"}
@@ -54,6 +63,90 @@ defmodule TF2Client.Requests do
   end
 
   def handle_chat_command({:vehicles_owned}, sender, _chat) do
+    key = {:user, normalize_username(sender), :vehicles_owned}
+
+    case RateLimiter.check(key, @stats_cooldown_rule) do
+      :deny ->
+        Logger.info("Rate limit reached: vehicles_owned user=#{sender}")
+        :ignore
+
+      :allow ->
+        vehicles_owned_reply(sender)
+    end
+  end
+
+  def handle_chat_command({:profit_rankings}, sender, _chat) do
+    key = {:global, :profit_rankings}
+
+    case RateLimiter.check(key, @stats_cooldown_rule) do
+      :deny ->
+        Logger.info("Rate limit reached: profit_rankings requested_by=#{sender}")
+        :ignore
+
+      :allow ->
+        profit_rankings_reply(sender)
+    end
+  end
+
+  def handle_chat_command({:claim, company_name}, sender, chat) do
+    case GameState.read() do
+      {:ok, game_state} ->
+        if GameState.company_claimed?(game_state, sender) do
+          Logger.info("Rate limit reached: claim_once user=#{sender}")
+          :ignore
+        else
+          submit("COMPANY", sender, chat, %{company_name: company_name})
+        end
+
+      {:error, _reason} ->
+        submit("COMPANY", sender, chat, %{company_name: company_name})
+    end
+  end
+
+  def handle_chat_command({:town, company_name}, sender, chat) do
+    case GameState.read() do
+      {:ok, game_state} ->
+        if GameState.town_purchased?(game_state, sender) do
+          Logger.info("Rate limit reached: town_once user=#{sender}")
+          :ignore
+        else
+          submit("TOWN", sender, chat, %{company_name: company_name})
+        end
+
+      {:error, _reason} ->
+        submit("TOWN", sender, chat, %{company_name: company_name})
+    end
+  end
+
+  def handle_chat_command({:line, carrier, cargo}, sender, chat) do
+    key = {:user, normalize_username(sender), :purchase_line}
+
+    case RateLimiter.check(key, @purchase_rate_rule) do
+      :deny ->
+        Logger.info("Rate limit reached: purchase_line user=#{sender}")
+        :ignore
+
+      :allow ->
+        submit("LINE", sender, chat, %{carrier: carrier, cargo: cargo})
+    end
+  end
+
+  def handle_chat_command({:vehicle, carrier, cargo}, sender, chat) do
+    key = {:user, normalize_username(sender), :purchase_vehicle}
+
+    case RateLimiter.check(key, @purchase_rate_rule) do
+      :deny ->
+        Logger.info("Rate limit reached: purchase_vehicle user=#{sender}")
+        :ignore
+
+      :allow ->
+        submit("VEHICLE", sender, chat, %{carrier: carrier, cargo: cargo})
+    end
+  end
+
+  def handle_chat_command(_other, _sender, _chat), do: :ignore
+
+  defp vehicles_owned_reply(sender) do
     case GameState.read() do
       {:ok, game_state} ->
         case GameState.vehicles_owned_count(game_state, sender) do
@@ -84,7 +177,7 @@ defmodule TF2Client.Requests do
     end
   end
 
-  def handle_chat_command({:profit_rankings}, sender, _chat) do
+  defp profit_rankings_reply(sender) do
     case GameState.read() do
       {:ok, game_state} ->
         rankings = GameState.top_players_by_profit(game_state, 10)
@@ -110,24 +203,6 @@ defmodule TF2Client.Requests do
         {:reply, "@#{sender} I couldn't read the game stats due to a setup issue. Please try again in a moment."}
     end
   end
-
-  def handle_chat_command({:claim, company_name}, sender, chat) do
-    submit("COMPANY", sender, chat, %{company_name: company_name})
-  end
-
-  def handle_chat_command({:town, company_name}, sender, chat) do
-    submit("TOWN", sender, chat, %{company_name: company_name})
-  end
-
-  def handle_chat_command({:line, carrier, cargo}, sender, chat) do
-    submit("LINE", sender, chat, %{carrier: carrier, cargo: cargo})
-  end
-
-  def handle_chat_command({:vehicle, carrier, cargo}, sender, chat) do
-    submit("VEHICLE", sender, chat, %{carrier: carrier, cargo: cargo})
-  end
-
-  def handle_chat_command(_other, _sender, _chat), do: :ignore
 
   defp submit(type, sender, chat, params) do
     params = normalize_params(params)
@@ -230,5 +305,9 @@ defmodule TF2Client.Requests do
       "#{index}) #{username}: #{format_integer(profit)}"
     end)
     |> Enum.join(" • ")
+  end
+
+  defp normalize_username(username) when is_binary(username) do
+    String.downcase(String.trim(username))
   end
 end
