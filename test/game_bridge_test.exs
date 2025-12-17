@@ -11,7 +11,10 @@ defmodule TF2Client.GameBridgeTest do
     System.put_env("TF2_INTEGRATION_GAME_FILES", dir)
 
     on_exit(fn ->
-      if is_binary(previous), do: System.put_env("TF2_INTEGRATION_GAME_FILES", previous), else: System.delete_env("TF2_INTEGRATION_GAME_FILES")
+      if is_binary(previous),
+        do: System.put_env("TF2_INTEGRATION_GAME_FILES", previous),
+        else: System.delete_env("TF2_INTEGRATION_GAME_FILES")
+
       File.rm_rf(dir)
     end)
 
@@ -37,4 +40,3 @@ defmodule TF2Client.GameBridgeTest do
     assert String.contains?(lua, ~s(company_name = "Some Co"))
   end
 end
-

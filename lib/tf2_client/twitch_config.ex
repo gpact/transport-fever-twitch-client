@@ -1,6 +1,8 @@
 defmodule TF2Client.TwitchConfig do
   @moduledoc false
 
+  alias TF2Client.Twitch.TokenRefresher
+
   def from_env do
     enabled =
       case System.get_env("TF2_ENABLE_TWITCH_BOT") do
@@ -12,7 +14,7 @@ defmodule TF2Client.TwitchConfig do
       {:error, "TF2_ENABLE_TWITCH_BOT disabled"}
     else
       with {:ok, user} <- fetch_env("TWITCH_BOT_USER"),
-           {:ok, pass} <- fetch_env("TWITCH_BOT_OAUTH"),
+           {:ok, pass} <- fetch_irc_password(),
            {:ok, channels} <- fetch_env_list("TWITCH_CHANNELS") do
         mod_channels = env_list("TWITCH_MOD_CHANNELS")
         debug = env_bool("TWITCH_DEBUG", false)
@@ -31,6 +33,22 @@ defmodule TF2Client.TwitchConfig do
       end
     end
   end
+
+  defp fetch_irc_password do
+    case System.get_env("TWITCH_BOT_OAUTH") do
+      value when is_binary(value) and value != "" ->
+        {:ok, ensure_oauth_prefix(value)}
+
+      _ ->
+        case TokenRefresher.irc_password() do
+          {:ok, pass} -> {:ok, pass}
+          {:error, :missing_tokens} -> {:error, "missing Twitch OAuth tokens; run mix twitch.oauth.bootstrap"}
+        end
+    end
+  end
+
+  defp ensure_oauth_prefix("oauth:" <> _rest = value), do: value
+  defp ensure_oauth_prefix(value) when is_binary(value), do: "oauth:" <> value
 
   defp fetch_env(key) do
     case System.get_env(key) do
@@ -79,4 +97,3 @@ defmodule TF2Client.TwitchConfig do
     end
   end
 end
-

@@ -9,4 +9,3 @@ defmodule TF2Client.Chat.TMI do
     :ok
   end
 end
-

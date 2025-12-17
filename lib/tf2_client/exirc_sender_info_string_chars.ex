@@ -24,4 +24,3 @@ defimpl String.Chars, for: ExIRC.SenderInfo do
   defp to_bin(nil), do: ""
   defp to_bin(_), do: ""
 end
-

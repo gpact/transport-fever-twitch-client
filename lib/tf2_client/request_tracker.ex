@@ -46,4 +46,3 @@ defmodule TF2Client.RequestTracker do
     {:reply, Map.keys(state), state}
   end
 end
-

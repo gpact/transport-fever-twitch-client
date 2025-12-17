@@ -11,4 +11,3 @@ defmodule TF2Client.Chat do
     Application.get_env(:tf2_client, :chat_sender, TF2Client.Chat.TMI)
   end
 end
-

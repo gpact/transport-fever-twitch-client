@@ -48,4 +48,3 @@ defmodule TF2Client.TwitchSupervisor do
     Conn.new(client, user, pass, channels, caps)
   end
 end
-

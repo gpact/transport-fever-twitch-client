@@ -6,21 +6,53 @@ It connects to Twitch chat via `tmi`, writes request `.lua` files for the game m
 
 ## Setup
 
+### Twitch Developer Application (OAuth)
+
+To use the OAuth bootstrap/refresh flow you need to create a Twitch Developer application:
+
+1. Go to `https://dev.twitch.tv/console/apps` and create a new application.
+2. Set the OAuth Redirect URL to `http://localhost:4000/oauth/callback` (must match `TWITCH_REDIRECT_URI`).
+3. Copy the `Client ID` and generate/copy the `Client Secret`.
+4. Set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` in your environment.
+
+If you rotate the client secret or revoke access, delete the stored token file and run the bootstrap again.
+
 ### Environment variables
 
 - `TWITCH_BOT_USER`: bot Twitch username (lowercase recommended)
-- `TWITCH_BOT_OAUTH`: bot OAuth token (must start with `oauth:`)
+- `TWITCH_BOT_OAUTH` (optional): bot OAuth token for IRC (must start with `oauth:`); if unset, uses the stored OAuth tokens
 - `TWITCH_CHANNELS`: comma/space separated list of channels to join (no `#`)
 - `TWITCH_MOD_CHANNELS` (optional): channels where the bot is a moderator (rate limits)
 - `TWITCH_DEBUG` (optional): `true`/`false`
 - `TF2_INTEGRATION_GAME_FILES`: folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files)
 - `TF2_ENABLE_TWITCH_BOT` (optional): set to `false` to disable starting the bot
+- `TWITCH_CLIENT_ID`: Twitch OAuth client id (required for OAuth bootstrap/refresh)
+- `TWITCH_CLIENT_SECRET`: Twitch OAuth client secret (required for OAuth bootstrap/refresh)
+- `TWITCH_REDIRECT_URI`: OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
 
 ### Run
 
 Start the game with the mod enabled so it can create/update `gameState.json` in `TF2_INTEGRATION_GAME_FILES`, then run:
 
 `iex -S mix`
+
+### OAuth bootstrap (one-time)
+
+Run:
+
+`mix twitch.oauth.bootstrap`
+
+#### Releases
+
+Mix tasks are not available in releases. To bootstrap in a release, run:
+
+`bin/tf2_client eval "TF2Client.Twitch.OAuthBootstrap.bootstrap!()"`
+
+Notes:
+
+- This opens a local browser and listens on `http://localhost:4000/oauth/callback`.
+- Tokens are stored at `~/.config/tf2_client/twitch_tokens.json` by default.
+- For headless servers, run the bootstrap on a machine with a browser and copy the token file to the server user.
 
 ## Chat commands
 

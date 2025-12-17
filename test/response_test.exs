@@ -23,4 +23,3 @@ defmodule TF2Client.ResponseTest do
     assert Response.format(parsed) == "@carol your COMPANY request completed"
   end
 end
-

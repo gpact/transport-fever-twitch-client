@@ -127,4 +127,3 @@ defmodule TF2Client.TwitchConnectionServer do
     ChannelServer.join(bot, channel)
   end
 end
-

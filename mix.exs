@@ -23,7 +23,9 @@ defmodule TF2Client.MixProject do
   defp deps do
     [
       {:tmi, "~> 0.7.0"},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:plug_cowboy, "~> 2.7"},
+      {:finch, "~> 0.18"}
     ]
   end
 end

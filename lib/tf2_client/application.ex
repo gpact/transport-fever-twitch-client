@@ -9,21 +9,22 @@ defmodule TF2Client.Application do
   @impl true
   def start(_type, _args) do
     children =
-      case TF2Client.TwitchConfig.from_env() do
-        {:ok, bot_config} ->
-          [
-            {TF2Client.TwitchSupervisor, bot_config},
-            TF2Client.RequestTracker,
-            TF2Client.ResponsePoller
-          ]
+      [{Finch, name: TF2Client.Finch}] ++
+        case TF2Client.TwitchConfig.from_env() do
+          {:ok, bot_config} ->
+            [
+              {TF2Client.TwitchSupervisor, bot_config},
+              TF2Client.RequestTracker,
+              TF2Client.ResponsePoller
+            ]
 
-        {:error, reason} ->
-          if Mix.env() != :test do
-            Logger.warning("Twitch bot disabled: #{reason}")
-          end
+          {:error, reason} ->
+            if Mix.env() != :test do
+              Logger.warning("Twitch bot disabled: #{reason}")
+            end
 
-          []
-      end
+            []
+        end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
