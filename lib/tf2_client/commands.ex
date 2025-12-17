@@ -12,7 +12,9 @@ defmodule TF2Client.Commands do
       "!line <carrier> <cargo>",
       "!vehicle <carrier> <cargo>",
       "!carriers",
-      "!cargo"
+      "!cargo",
+      "!profit",
+      "!vehicles"
     ]
   end
 
@@ -44,6 +46,12 @@ defmodule TF2Client.Commands do
 
       [value] when value in ["cargo", "cargos"] ->
         {:ok, {:cargo}}
+
+      [value] when value in ["profit", "profits"] ->
+        {:ok, {:profit}}
+
+      [value] when value in ["vehicles", "fleet"] ->
+        {:ok, {:vehicles_owned}}
 
       ["claim"] ->
         {:ok, {:claim, nil}}

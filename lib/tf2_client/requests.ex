@@ -10,6 +10,7 @@ defmodule TF2Client.Requests do
   require Logger
 
   alias TF2Client.GameBridge
+  alias TF2Client.GameState
   alias TF2Client.RequestTracker
 
   def handle_chat_command({:help}, _sender, _chat) do
@@ -22,6 +23,65 @@ defmodule TF2Client.Requests do
 
   def handle_chat_command({:cargo}, _sender, _chat) do
     {:reply, "Cargo types: #{Enum.join(@cargo_types, ", ")}"}
+  end
+
+  def handle_chat_command({:profit}, sender, _chat) do
+    case GameState.read() do
+      {:ok, game_state} ->
+        case GameState.profit_for_username(game_state, sender) do
+          {:ok, profit} when is_integer(profit) and profit >= 0 ->
+            {:reply, "@#{sender} your total profit so far is #{format_integer(profit)}."}
+
+          {:ok, profit} when is_integer(profit) ->
+            {:reply, "@#{sender} your total profit so far is #{format_integer(profit)} (net loss)."}
+
+          {:error, :profit_unavailable} ->
+            {:reply, "@#{sender} I don't have profit data for you yet."}
+        end
+
+      {:error, :game_state_missing} ->
+        {:reply,
+         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+
+      {:error, :game_state_invalid} ->
+        {:reply,
+         "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
+
+      {:error, {:file_error, reason}} ->
+        Logger.warning("Failed to read game state for profit: #{inspect(reason)}")
+        {:reply, "@#{sender} I couldn't read the game stats due to a setup issue. Please try again in a moment."}
+    end
+  end
+
+  def handle_chat_command({:vehicles_owned}, sender, _chat) do
+    case GameState.read() do
+      {:ok, game_state} ->
+        case GameState.vehicles_owned_count(game_state, sender) do
+          {:ok, 0} ->
+            {:reply, "@#{sender} you don't own any vehicles yet."}
+
+          {:ok, 1} ->
+            {:reply, "@#{sender} you currently own 1 vehicle."}
+
+          {:ok, count} when is_integer(count) ->
+            {:reply, "@#{sender} you currently own #{count} vehicles."}
+
+          {:error, :vehicles_unavailable} ->
+            {:reply, "@#{sender} I don't have vehicle data for you yet."}
+        end
+
+      {:error, :game_state_missing} ->
+        {:reply,
+         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+
+      {:error, :game_state_invalid} ->
+        {:reply,
+         "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
+
+      {:error, {:file_error, reason}} ->
+        Logger.warning("Failed to read game state for vehicles owned: #{inspect(reason)}")
+        {:reply, "@#{sender} I couldn't read the game stats due to a setup issue. Please try again in a moment."}
+    end
   end
 
   def handle_chat_command({:claim, company_name}, sender, chat) do
@@ -119,4 +179,20 @@ defmodule TF2Client.Requests do
   defp action_description("VEHICLE", _params), do: "add a vehicle"
 
   defp action_description(_type, _params), do: "do that"
+
+  defp format_integer(value) when is_integer(value) do
+    sign = if value < 0, do: "-", else: ""
+    digits = Integer.to_string(abs(value))
+
+    chunks =
+      digits
+      |> String.reverse()
+      |> String.graphemes()
+      |> Enum.chunk_every(3)
+      |> Enum.map(&Enum.join/1)
+      |> Enum.join(",")
+      |> String.reverse()
+
+    sign <> chunks
+  end
 end

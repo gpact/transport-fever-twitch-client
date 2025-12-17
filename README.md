@@ -28,6 +28,10 @@ Start the game with the mod enabled so it can create/update `gameState.json` in 
 - `!town [company name]` → purchase/assign a town
 - `!line <carrier> <cargo>` → purchase/assign a transport line
 - `!vehicle <carrier> <cargo>` → purchase/assign a vehicle
+- `!profit` → show your total profit
+- `!vehicles` → show how many vehicles you own
+- `!carriers` → list valid carrier types
+- `!cargo` → list valid cargo types
 - `!help` → show help
 
 Valid carriers: `AIR`, `RAIL`, `ROAD`, `WATER`, `TRAM`.
