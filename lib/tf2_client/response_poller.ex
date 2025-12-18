@@ -7,6 +7,7 @@ defmodule TF2Client.ResponsePoller do
   alias TF2Client.RequestTracker
   alias TF2Client.Response
   alias TF2Client.Chat
+  alias TF2Client.ChatbotState
 
   @interval_ms 1_000
 
@@ -39,7 +40,7 @@ defmodule TF2Client.ResponsePoller do
            {:ok, json} <- File.read(response_path),
            {:ok, parsed} <- Response.parse(json),
            message when is_binary(message) <- Response.format(parsed) do
-        Chat.send(channel, message)
+        maybe_send(channel, message)
         File.rm(response_path)
 
         if parsed.completed do
@@ -51,6 +52,16 @@ defmodule TF2Client.ResponsePoller do
       else
         _ -> :noop
       end
+    end
+  end
+
+  defp maybe_send(channel, message) when is_binary(channel) and is_binary(message) do
+    sender = Application.get_env(:tf2_client, :chat_sender, TF2Client.Chat.TMI)
+
+    if sender == TF2Client.Chat.TMI and not ChatbotState.enabled?(channel) do
+      :ok
+    else
+      Chat.send(channel, message)
     end
   end
 end

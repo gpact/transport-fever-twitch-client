@@ -36,6 +36,8 @@ Start the game with the mod enabled so it can create/update `gameState.json` in 
 
 `iex -S mix`
 
+By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster.
+
 ### OAuth bootstrap (one-time)
 
 Run:
@@ -56,6 +58,8 @@ Notes:
 
 ## Chat commands
 
+- `!tf2on` → enable the bot in chat (mods/broadcaster only)
+- `!tf2off` → disable the bot in chat (mods/broadcaster only)
 - `!claim [company name]` → create/claim company
 - `!town [company name]` → purchase/assign a town
 - `!line <carrier> <cargo>` → purchase/assign a transport line

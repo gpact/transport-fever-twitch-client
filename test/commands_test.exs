@@ -19,6 +19,11 @@ defmodule TF2Client.CommandsTest do
     assert {:ok, {:profit_rankings}} = Commands.parse("!rank")
   end
 
+  test "parses enable/disable commands" do
+    assert {:ok, {:tf2_on}} = Commands.parse("!tf2on")
+    assert {:ok, {:tf2_off}} = Commands.parse("!tf2off")
+  end
+
   test "parses claim and town" do
     assert {:ok, {:claim, nil}} = Commands.parse("!claim")
     assert {:ok, {:claim, "My Co"}} = Commands.parse("!claim My Co")

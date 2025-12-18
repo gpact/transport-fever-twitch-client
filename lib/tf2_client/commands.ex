@@ -15,7 +15,9 @@ defmodule TF2Client.Commands do
       "!cargo",
       "!profit",
       "!vehicles",
-      "!rank"
+      "!rank",
+      "!tf2on",
+      "!tf2off"
     ]
   end
 
@@ -56,6 +58,12 @@ defmodule TF2Client.Commands do
 
       [value] when value in ["rank", "ranks", "leaderboard", "top"] ->
         {:ok, {:profit_rankings}}
+
+      [value] when value in ["tf2on"] ->
+        {:ok, {:tf2_on}}
+
+      [value] when value in ["tf2off"] ->
+        {:ok, {:tf2_off}}
 
       ["claim"] ->
         {:ok, {:claim, nil}}

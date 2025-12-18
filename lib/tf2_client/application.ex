@@ -19,6 +19,8 @@ defmodule TF2Client.Application do
   end
 
   defp start_runtime_children(supervisor) do
+    start_child(supervisor, TF2Client.ChatbotState)
+
     case TF2Client.TwitchConfig.from_env() do
       {:ok, bot_config} ->
         start_child(supervisor, {TF2Client.TwitchSupervisor, bot_config})
