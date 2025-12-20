@@ -6,11 +6,27 @@ defmodule TF2Client.RateLimiter do
   @table __MODULE__
 
   def check(key, rule) do
-    now = System.os_time(:second)
-    check(key, rule, now)
+    case disabled?() do
+      true ->
+        :allow
+
+      false ->
+        now = System.os_time(:second)
+        check(key, rule, now)
+    end
   end
 
   def check(key, rule, now) when is_integer(now) do
+    case disabled?() do
+      true ->
+        :allow
+
+      false ->
+        check_rule(key, rule, now)
+    end
+  end
+
+  defp check_rule(key, rule, now) when is_integer(now) do
     ensure_table()
 
     case rule do
@@ -114,6 +130,37 @@ defmodule TF2Client.RateLimiter do
 
       _ ->
         :ok
+    end
+  end
+
+  defp disabled? do
+    case Application.get_env(:tf2_client, :disable_rate_limits) do
+      true -> true
+      false -> false
+      nil -> env_disabled?()
+      value -> truthy?(value)
+    end
+  end
+
+  defp env_disabled? do
+    case System.get_env("TF2_DISABLE_RATE_LIMITS") do
+      nil -> false
+      value -> truthy?(value)
+    end
+  end
+
+  defp truthy?(value) do
+    case value do
+      true -> true
+      1 -> true
+      "1" -> true
+      "true" -> true
+      "TRUE" -> true
+      "yes" -> true
+      "YES" -> true
+      "on" -> true
+      "ON" -> true
+      _ -> false
     end
   end
 end

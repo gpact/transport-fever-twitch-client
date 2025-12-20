@@ -4,7 +4,13 @@ defmodule TF2Client.RateLimiterTest do
   alias TF2Client.RateLimiter
 
   setup do
+    previous = Application.get_env(:tf2_client, :disable_rate_limits)
     RateLimiter.reset()
+
+    on_exit(fn ->
+      Application.put_env(:tf2_client, :disable_rate_limits, previous)
+    end)
+
     :ok
   end
 
@@ -41,5 +47,13 @@ defmodule TF2Client.RateLimiterTest do
     assert :deny = RateLimiter.check(key, rule, 1_900)
 
     assert :allow = RateLimiter.check(key, rule, 5_000)
+  end
+
+  test "allows everything when rate limiting is disabled" do
+    Application.put_env(:tf2_client, :disable_rate_limits, true)
+    key = {:user, "alice", :purchase_vehicle}
+
+    assert :allow = RateLimiter.check(key, :once, 1_000)
+    assert :allow = RateLimiter.check(key, :once, 1_001)
   end
 end

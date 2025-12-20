@@ -26,6 +26,7 @@ If you rotate the client secret or revoke access, delete the stored token file a
 - `TWITCH_DEBUG` (optional): `true`/`false`
 - `TF2_INTEGRATION_GAME_FILES`: folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files)
 - `TF2_ENABLE_TWITCH_BOT` (optional): set to `false` to disable starting the bot
+- `TF2_DISABLE_RATE_LIMITS` (optional): set to `true` to disable rate limiting
 - `TWITCH_CLIENT_ID`: Twitch OAuth client id (required for OAuth bootstrap/refresh)
 - `TWITCH_CLIENT_SECRET`: Twitch OAuth client secret (required for OAuth bootstrap/refresh)
 - `TWITCH_REDIRECT_URI`: OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
@@ -83,7 +84,7 @@ Run an interactive shell that simulates chat messages and prints bot replies:
 `mix tf2.sim`
 
 If `TF2_INTEGRATION_GAME_FILES` is not set, it uses a fresh temp folder and prints the path on start.
-Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a script of chat lines.
+Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a script of chat lines, and `:ratelimit off` to disable rate limiting.
 
 ## File protocol (with the game mod)
 

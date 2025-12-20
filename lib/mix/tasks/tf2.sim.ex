@@ -116,6 +116,7 @@ defmodule Mix.Tasks.Tf2.Sim do
       :help                 show this help
       :dir                  print requests dir
       :auto on|off           toggle auto responses (default: on)
+      :ratelimit on|off      toggle rate limiting (default: on)
       :sender <name>         set default sender (default: tester)
       :channel <name>        set channel label used in output (default: streamer)
       :save <save_uuid>      write gameState.json save_uuid
@@ -141,6 +142,16 @@ defmodule Mix.Tasks.Tf2.Sim do
 
   defp handle_sim_command("auto on", state), do: %{state | auto: true}
   defp handle_sim_command("auto off", state), do: %{state | auto: false}
+
+  defp handle_sim_command("ratelimit on", state) do
+    Application.put_env(:tf2_client, :disable_rate_limits, false)
+    state
+  end
+
+  defp handle_sim_command("ratelimit off", state) do
+    Application.put_env(:tf2_client, :disable_rate_limits, true)
+    state
+  end
 
   defp handle_sim_command("play " <> rest, state) do
     rest = String.trim(rest)
