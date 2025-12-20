@@ -11,6 +11,8 @@ defmodule Mix.Tasks.Tf2.Sim do
   alias TF2Client.ResponsePoller
   alias TF2Client.Sim.Mod
 
+  @default_script_delay_ms 250
+
   @impl Mix.Task
   def run(_args) do
     Application.ensure_all_started(:logger)
@@ -117,6 +119,7 @@ defmodule Mix.Tasks.Tf2.Sim do
       :sender <name>         set default sender (default: tester)
       :channel <name>        set channel label used in output (default: streamer)
       :save <save_uuid>      write gameState.json save_uuid
+      :play <path> [delay]   play script file; delay in ms (default: #{@default_script_delay_ms})
       :respond <id|last> ok
       :respond <id|last> pending
       :respond <id|last> error <message>
@@ -138,6 +141,19 @@ defmodule Mix.Tasks.Tf2.Sim do
 
   defp handle_sim_command("auto on", state), do: %{state | auto: true}
   defp handle_sim_command("auto off", state), do: %{state | auto: false}
+
+  defp handle_sim_command("play " <> rest, state) do
+    rest = String.trim(rest)
+
+    case parse_play_args(rest) do
+      {:ok, path, delay_ms} ->
+        play_script_file(path, delay_ms, state)
+
+      {:error, message} ->
+        IO.puts(message)
+        state
+    end
+  end
 
   defp handle_sim_command("sender " <> sender, state) do
     %{state | default_sender: String.trim(sender)}
@@ -188,6 +204,15 @@ defmodule Mix.Tasks.Tf2.Sim do
   defp handle_sim_command(_unknown, state) do
     IO.puts("Unknown simulator command. Type :help")
     state
+  end
+
+  @doc false
+  def simulate_lines(lines, state, delay_ms \\ @default_script_delay_ms) when is_list(lines) do
+    Enum.reduce(lines, state, fn line, state ->
+      state = handle_line(line, state)
+      maybe_sleep(delay_ms)
+      state
+    end)
   end
 
   defp split_sender(line, default_sender) do
@@ -248,4 +273,57 @@ defmodule Mix.Tasks.Tf2.Sim do
       File.write!(path, ~s({"save_uuid":"sim-save"}\n))
     end
   end
+
+  defp parse_play_args(""), do: {:error, "Usage: :play <path> [delay_ms]"}
+
+  defp parse_play_args(rest) do
+    case String.split(rest, ~r/\s+/, parts: 2, trim: true) do
+      [path] ->
+        {:ok, path, @default_script_delay_ms}
+
+      [path, delay_raw] ->
+        delay_raw = String.trim(delay_raw)
+
+        case Integer.parse(delay_raw) do
+          {delay_ms, ""} when delay_ms >= 0 ->
+            {:ok, path, delay_ms}
+
+          _ ->
+            {:error, "Usage: :play <path> [delay_ms]"}
+        end
+
+      _ ->
+        {:error, "Usage: :play <path> [delay_ms]"}
+    end
+  end
+
+  defp play_script_file(path, delay_ms, state) do
+    case File.read(path) do
+      {:ok, contents} ->
+        lines = script_lines(contents)
+        simulate_lines(lines, state, delay_ms)
+
+      {:error, reason} ->
+        IO.puts("Failed to read script file: #{inspect(reason)}")
+        state
+    end
+  end
+
+  defp script_lines(contents) when is_binary(contents) do
+    contents
+    |> String.split(~r/\R/, trim: false)
+    |> Enum.map(&String.trim_trailing/1)
+    |> Enum.reject(&script_skip_line?/1)
+  end
+
+  defp script_skip_line?(line) when is_binary(line) do
+    trimmed = String.trim(line)
+    trimmed == "" or String.starts_with?(trimmed, "#")
+  end
+
+  defp maybe_sleep(delay_ms) when is_integer(delay_ms) and delay_ms > 0 do
+    Process.sleep(delay_ms)
+  end
+
+  defp maybe_sleep(_delay_ms), do: :ok
 end
