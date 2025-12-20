@@ -18,9 +18,15 @@ defmodule TF2Client.GameBridge do
 
   def submit(type, username, params) when is_binary(type) and is_binary(username) and is_map(params) do
     with {:ok, save_uuid} <- read_save_uuid(),
-         {:ok, order_id} <- write_order(type, username, save_uuid, params) do
+         {:ok, order_id} <- write_order(new_order_id(), type, username, save_uuid, params) do
       {:ok, order_id}
     end
+  end
+
+  def submit_with_order_id(order_id, type, username, save_uuid, params)
+      when is_binary(order_id) and is_binary(type) and is_binary(username) and
+             is_binary(save_uuid) and is_map(params) do
+    write_order(order_id, type, username, save_uuid, params)
   end
 
   def read_save_uuid do
@@ -43,8 +49,7 @@ defmodule TF2Client.GameBridge do
     end
   end
 
-  defp write_order(type, username, save_uuid, params) do
-    order_id = new_order_id()
+  defp write_order(order_id, type, username, save_uuid, params) do
     dir = requests_dir()
 
     payload = %{

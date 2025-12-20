@@ -33,6 +33,7 @@ defmodule Mix.Tasks.Tf2.Sim do
 
   defp start_children do
     children = [
+      TF2Client.RequestQueue,
       RequestTracker,
       ResponsePoller
     ]

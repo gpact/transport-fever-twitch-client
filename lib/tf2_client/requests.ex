@@ -12,6 +12,7 @@ defmodule TF2Client.Requests do
   alias TF2Client.GameBridge
   alias TF2Client.GameState
   alias TF2Client.RateLimiter
+  alias TF2Client.RequestQueue
   alias TF2Client.RequestTracker
 
   @purchase_rate_rule %{
@@ -220,15 +221,22 @@ defmodule TF2Client.Requests do
   defp submit(type, sender, chat, params) do
     params = normalize_params(params)
 
-    case GameBridge.submit(type, sender, params) do
-      {:ok, order_id} ->
-        RequestTracker.track(order_id, %{
-          channel: chat,
-          username: sender,
-          type: type
-        })
+    case GameBridge.read_save_uuid() do
+      {:ok, save_uuid} ->
+        case RequestQueue.enqueue(type, sender, chat, params, save_uuid) do
+          {:ok, order_id} ->
+            RequestTracker.track(order_id, %{
+              channel: chat,
+              username: sender,
+              type: type
+            })
 
-        {:reply, queued_message(type, sender, params)}
+            {:reply, queued_message(type, sender, params)}
+
+          {:error, reason} ->
+            Logger.warning("Failed to enqueue request: #{inspect(reason)}")
+            {:reply, "@#{sender} something went wrong on my side. Please try again in a moment."}
+        end
 
       {:error, :game_state_missing} ->
         {:reply,
@@ -243,12 +251,8 @@ defmodule TF2Client.Requests do
          "@#{sender} the game isn't ready yet. Load a save (with the integration enabled) and try again in a few seconds."}
 
       {:error, {:file_error, reason}} ->
-        Logger.warning("Failed to submit request to game files: #{inspect(reason)}")
+        Logger.warning("Failed to read game state for queued request: #{inspect(reason)}")
         {:reply, "@#{sender} I couldn't send that to the game due to a setup issue. Please try again in a moment."}
-
-      {:error, reason} ->
-        Logger.warning("Failed to submit request: #{inspect(reason)}")
-        {:reply, "@#{sender} something went wrong on my side. Please try again in a moment."}
     end
   end
 

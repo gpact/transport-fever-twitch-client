@@ -24,6 +24,7 @@ defmodule TF2Client.Application do
     case TF2Client.TwitchConfig.from_env() do
       {:ok, bot_config} ->
         start_child(supervisor, {TF2Client.TwitchSupervisor, bot_config})
+        start_child(supervisor, TF2Client.RequestQueue)
         start_child(supervisor, TF2Client.RequestTracker)
         start_child(supervisor, TF2Client.ResponsePoller)
         :ok
