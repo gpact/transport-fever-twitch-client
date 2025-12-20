@@ -5,6 +5,24 @@ defmodule TF2Client.Commands do
 
   @valid_carriers Enum.map(TF2Client.Game.carrier_types(), &String.upcase(to_string(&1)))
 
+  @pausable_commands [:claim, :town, :line, :vehicle]
+
+  @pausable_command_names %{
+    "claim" => :claim,
+    "town" => :town,
+    "line" => :line,
+    "vehicle" => :vehicle
+  }
+
+  @pause_target_aliases Map.merge(@pausable_command_names, %{
+                          "company" => :claim,
+                          "companies" => :claim,
+                          "towns" => :town,
+                          "lines" => :line,
+                          "vehicles" => :vehicle,
+                          "all" => :all
+                        })
+
   def examples do
     [
       "!claim [company name]",
@@ -17,9 +35,51 @@ defmodule TF2Client.Commands do
       "!vehicles",
       "!rank",
       "!tf2on",
-      "!tf2off"
+      "!tf2off",
+      "!paused",
+      "!pause <claim|town|line|vehicle|all>",
+      "!resume <claim|town|line|vehicle|all>"
     ]
   end
+
+  def pausable_commands do
+    @pausable_commands
+  end
+
+  def command_name(message) when is_binary(message) do
+    message = String.trim(message)
+
+    case message do
+      "" ->
+        nil
+
+      _ ->
+        case String.starts_with?(message, @command_flag) do
+          true -> command_name_from_flagged(message)
+          false -> nil
+        end
+    end
+  end
+
+  def pause_target(name) when is_binary(name) do
+    name
+    |> String.trim()
+    |> String.downcase()
+    |> then(&Map.get(@pause_target_aliases, &1))
+  end
+
+  def pausable_command_name(name) when is_binary(name) do
+    name
+    |> String.trim()
+    |> String.downcase()
+    |> then(&Map.get(@pausable_command_names, &1))
+  end
+
+  def pausable_command_key({:claim, _}), do: :claim
+  def pausable_command_key({:town, _}), do: :town
+  def pausable_command_key({:line, _, _}), do: :line
+  def pausable_command_key({:vehicle, _, _}), do: :vehicle
+  def pausable_command_key(_), do: nil
 
   def parse(message) when is_binary(message) do
     message = String.trim(message)
@@ -64,6 +124,21 @@ defmodule TF2Client.Commands do
 
       [value] when value in ["tf2off"] ->
         {:ok, {:tf2_off}}
+
+      ["paused"] ->
+        {:ok, {:paused}}
+
+      ["pause"] ->
+        {:error, "usage: #{pause_usage(:pause)}"}
+
+      ["pause", target] ->
+        parse_pause(:pause, target)
+
+      ["resume"] ->
+        {:error, "usage: #{pause_usage(:resume)}"}
+
+      ["resume", target] ->
+        parse_pause(:resume, target)
 
       ["claim"] ->
         {:ok, {:claim, nil}}
@@ -113,4 +188,23 @@ defmodule TF2Client.Commands do
 
   defp normalize_cargo("PASSENGER"), do: "PASSENGERS"
   defp normalize_cargo(cargo), do: cargo
+
+  defp command_name_from_flagged(message) do
+    raw = String.trim_leading(message, @command_flag)
+
+    case String.split(raw, ~r/\s+/, parts: 2, trim: true) do
+      [name | _] -> String.downcase(name)
+      _ -> nil
+    end
+  end
+
+  defp parse_pause(action, target) when action in [:pause, :resume] do
+    case pause_target(target) do
+      nil -> {:error, "usage: #{pause_usage(action)}"}
+      pause_target -> {:ok, {action, pause_target}}
+    end
+  end
+
+  defp pause_usage(:pause), do: "!pause <claim|town|line|vehicle|all>"
+  defp pause_usage(:resume), do: "!resume <claim|town|line|vehicle|all>"
 end

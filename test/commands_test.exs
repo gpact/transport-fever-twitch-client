@@ -24,6 +24,16 @@ defmodule TF2Client.CommandsTest do
     assert {:ok, {:tf2_off}} = Commands.parse("!tf2off")
   end
 
+  test "parses pause and resume commands" do
+    assert {:ok, {:pause, :town}} = Commands.parse("!pause town")
+    assert {:ok, {:resume, :town}} = Commands.parse("!resume town")
+    assert {:ok, {:pause, :all}} = Commands.parse("!pause all")
+    assert {:ok, {:resume, :all}} = Commands.parse("!resume all")
+    assert {:ok, {:paused}} = Commands.parse("!paused")
+    assert {:error, _} = Commands.parse("!pause")
+    assert {:error, _} = Commands.parse("!resume garbage")
+  end
+
   test "parses claim and town" do
     assert {:ok, {:claim, nil}} = Commands.parse("!claim")
     assert {:ok, {:claim, "My Co"}} = Commands.parse("!claim My Co")
