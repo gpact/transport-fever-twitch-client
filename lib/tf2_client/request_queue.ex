@@ -21,10 +21,15 @@ defmodule TF2Client.RequestQueue do
     GenServer.start_link(__MODULE__, %{}, name: @name)
   end
 
-  def enqueue(type, username, chat, params, save_uuid)
+  def submit(type, username, chat, params, save_uuid)
       when is_binary(type) and is_binary(username) and is_binary(chat) and is_map(params) and
              is_binary(save_uuid) do
-    GenServer.call(@name, {:enqueue, type, username, chat, params, save_uuid})
+    delay_ms = delay_ms_for(type)
+
+    case delay_ms do
+      0 -> submit_immediately(type, username, save_uuid, params)
+      delay_ms -> enqueue_delayed(type, username, chat, params, save_uuid, delay_ms)
+    end
   end
 
   @impl GenServer
@@ -33,9 +38,8 @@ defmodule TF2Client.RequestQueue do
   end
 
   @impl GenServer
-  def handle_call({:enqueue, type, username, chat, params, save_uuid}, _from, state) do
+  def handle_call({:enqueue, type, username, chat, params, save_uuid, delay_ms}, _from, state) do
     order_id = new_order_id()
-    delay_ms = delay_ms_for(type)
 
     entry = %{
       order_id: order_id,
@@ -117,6 +121,20 @@ defmodule TF2Client.RequestQueue do
       end
 
     Map.get(delays, type, Map.get(@default_delays_ms, type, 0))
+  end
+
+  defp enqueue_delayed(type, username, chat, params, save_uuid, delay_ms)
+       when is_integer(delay_ms) and delay_ms > 0 do
+    GenServer.call(@name, {:enqueue, type, username, chat, params, save_uuid, delay_ms})
+  end
+
+  defp submit_immediately(type, username, save_uuid, params) do
+    order_id = new_order_id()
+
+    case GameBridge.submit_with_order_id(order_id, type, username, save_uuid, params) do
+      {:ok, _order_id} -> {:ok, order_id}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp env_delay_overrides do

@@ -223,7 +223,7 @@ defmodule TF2Client.Requests do
 
     case GameBridge.read_save_uuid() do
       {:ok, save_uuid} ->
-        case RequestQueue.enqueue(type, sender, chat, params, save_uuid) do
+        case RequestQueue.submit(type, sender, chat, params, save_uuid) do
           {:ok, order_id} ->
             RequestTracker.track(order_id, %{
               channel: chat,

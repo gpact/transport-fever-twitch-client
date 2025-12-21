@@ -27,7 +27,7 @@ If you rotate the client secret or revoke access, delete the stored token file a
 - `TF2_INTEGRATION_GAME_FILES`: folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files)
 - `TF2_ENABLE_TWITCH_BOT` (optional): set to `false` to disable starting the bot
 - `TF2_DISABLE_RATE_LIMITS` (optional): set to `true` to disable rate limiting
-- `TF2_REQUEST_QUEUE_DELAYS_MS` (optional): per-request delays (e.g. `TOWN=5000,COMPANY=0,LINE=0,VEHICLE=0`)
+- `TF2_REQUEST_QUEUE_DELAYS_MS` (optional): per-request delays (e.g. `TOWN=5000,COMPANY=0,LINE=0,VEHICLE=0`). Requests with `0` delay are sent immediately; delayed types are queued FIFO.
 - `TWITCH_CLIENT_ID`: Twitch OAuth client id (required for OAuth bootstrap/refresh)
 - `TWITCH_CLIENT_SECRET`: Twitch OAuth client secret (required for OAuth bootstrap/refresh)
 - `TWITCH_REDIRECT_URI`: OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
