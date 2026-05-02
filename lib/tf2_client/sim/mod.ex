@@ -16,6 +16,9 @@ defmodule TF2Client.Sim.Mod do
     }
 
     json = Jason.encode!(data)
-    File.write(GameBridge.response_json_path(order_id), json <> "\n")
+
+    with :ok <- GameBridge.ensure_requests_dir() do
+      File.write(GameBridge.response_json_path(order_id), json <> "\n")
+    end
   end
 end

@@ -195,6 +195,7 @@ defmodule Mix.Tasks.Tf2.Sim do
 
   defp handle_sim_command("save " <> save_uuid, state) do
     save_uuid = String.trim(save_uuid)
+    ensure_requests_dir()
     File.write!(GameBridge.game_state_path(), ~s({"save_uuid":"#{save_uuid}"}\n))
     IO.puts("Wrote save_uuid=#{save_uuid} to #{GameBridge.game_state_path()}")
     state
@@ -281,18 +282,22 @@ defmodule Mix.Tasks.Tf2.Sim do
   defp extract_type_from_reply(_), do: nil
 
   defp ensure_requests_dir do
-    File.mkdir_p!(GameBridge.requests_dir())
+    case GameBridge.ensure_requests_dir() do
+      :ok -> :ok
+      {:error, reason} -> raise "Failed to create requests dir: #{inspect(reason)}"
+    end
   end
 
   defp ensure_requests_env do
-    if System.get_env("TF2_INTEGRATION_GAME_FILES") do
-      :ok
-    else
-      dir =
-        Path.join(System.tmp_dir!(), "tf2-sim-" <> Base.encode16(:crypto.strong_rand_bytes(4), case: :lower))
+    case System.get_env("TF2_INTEGRATION_GAME_FILES") do
+      value when is_binary(value) and value != "" ->
+        :ok
 
-      System.put_env("TF2_INTEGRATION_GAME_FILES", dir)
-      :ok
+      _other ->
+        bytes = :crypto.strong_rand_bytes(4)
+        dir = Path.join(System.tmp_dir!(), "tf2-sim-" <> Base.encode16(bytes, case: :lower))
+        System.put_env("TF2_INTEGRATION_GAME_FILES", dir)
+        :ok
     end
   end
 

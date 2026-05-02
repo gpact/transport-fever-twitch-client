@@ -34,6 +34,13 @@ defmodule TF2Client.GameState do
   end
 
   def read do
+    case GameBridge.ensure_requests_dir() do
+      :ok -> read_game_state_file()
+      {:error, reason} -> {:error, {:file_error, reason}}
+    end
+  end
+
+  defp read_game_state_file do
     case File.read(GameBridge.game_state_path()) do
       {:ok, json} ->
         decode_game_state(json)

@@ -24,7 +24,7 @@ If you rotate the client secret or revoke access, delete the stored token file a
 - `TWITCH_CHANNELS`: comma/space separated list of channels to join (no `#`)
 - `TWITCH_MOD_CHANNELS` (optional): channels where the bot is a moderator (rate limits)
 - `TWITCH_DEBUG` (optional): `true`/`false`
-- `TF2_INTEGRATION_GAME_FILES`: folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files)
+- `TF2_INTEGRATION_GAME_FILES` (optional): folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files). If unset or empty, the bot uses `~/.tf2`, matching the game mod.
 - `TF2_ENABLE_TWITCH_BOT` (optional): set to `false` to disable starting the bot
 - `TF2_DISABLE_RATE_LIMITS` (optional): set to `true` to disable rate limiting
 - `TF2_REQUEST_QUEUE_DELAYS_MS` (optional): per-request delays (e.g. `TOWN=5000,COMPANY=0,LINE=0,VEHICLE=0`). Requests with `0` delay are sent immediately; delayed types are queued FIFO.
@@ -34,7 +34,7 @@ If you rotate the client secret or revoke access, delete the stored token file a
 
 ### Run
 
-Start the game with the mod enabled so it can create/update `gameState.json` in `TF2_INTEGRATION_GAME_FILES`, then run:
+Start the game with the mod enabled so it can create/update `gameState.json` in the shared game files folder, then run:
 
 `iex -S mix`
 
@@ -84,10 +84,11 @@ Run an interactive shell that simulates chat messages and prints bot replies:
 
 `mix tf2.sim`
 
-If `TF2_INTEGRATION_GAME_FILES` is not set, it uses a fresh temp folder and prints the path on start.
+If `TF2_INTEGRATION_GAME_FILES` is unset or empty, it uses a fresh temp folder and prints the path on start.
 Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a script of chat lines, `:delay <ms>` to pause before the next command, and `:ratelimit off` to disable rate limiting.
 
 ## File protocol (with the game mod)
 
+- Shared folder: `TF2_INTEGRATION_GAME_FILES` when set and non-empty, otherwise `~/.tf2`; if no home folder is available, `<temp>/tf2`.
 - Bot writes: `#{order_id}.lua` (Lua `return` table with `schema_version = 1`) and appends `order_id` to `requests.txt`.
 - Mod writes: `#{order_id}.json` responses; the bot reads, replies in chat, then deletes the response file (and the request `.lua` on completion).

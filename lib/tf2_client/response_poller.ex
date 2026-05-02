@@ -33,6 +33,13 @@ defmodule TF2Client.ResponsePoller do
   end
 
   defp handle_tick do
+    case GameBridge.ensure_requests_dir() do
+      :ok -> poll_pending_responses()
+      {:error, _reason} -> :noop
+    end
+  end
+
+  defp poll_pending_responses do
     for order_id <- RequestTracker.pending_ids() do
       with %{channel: channel} <- RequestTracker.get(order_id),
            response_path <- GameBridge.response_json_path(order_id),
