@@ -120,6 +120,7 @@ defmodule Mix.Tasks.Tf2.Sim do
       :ratelimit on|off      toggle rate limiting (default: on)
       :sender <name>         set default sender (default: tester)
       :channel <name>        set channel label used in output (default: streamer)
+      :delay <ms>            pause before the next command
       :save <save_uuid>      write gameState.json save_uuid
       :play <path> [delay]   play script file; delay in ms (default: #{@default_script_delay_ms})
       :respond <id|last> ok
@@ -173,6 +174,23 @@ defmodule Mix.Tasks.Tf2.Sim do
 
   defp handle_sim_command("channel " <> channel, state) do
     %{state | channel: String.trim(channel)}
+  end
+
+  defp handle_sim_command("delay " <> rest, state) do
+    case parse_delay_ms(rest) do
+      {:ok, delay_ms} ->
+        Process.sleep(delay_ms)
+        state
+
+      {:error, message} ->
+        IO.puts(message)
+        state
+    end
+  end
+
+  defp handle_sim_command("delay", state) do
+    IO.puts("Usage: :delay <ms>")
+    state
   end
 
   defp handle_sim_command("save " <> save_uuid, state) do
@@ -331,6 +349,18 @@ defmodule Mix.Tasks.Tf2.Sim do
   defp script_skip_line?(line) when is_binary(line) do
     trimmed = String.trim(line)
     trimmed == "" or String.starts_with?(trimmed, "#")
+  end
+
+  defp parse_delay_ms(raw) when is_binary(raw) do
+    trimmed = String.trim(raw)
+
+    case Integer.parse(trimmed) do
+      {delay_ms, ""} when delay_ms >= 0 ->
+        {:ok, delay_ms}
+
+      _ ->
+        {:error, "Usage: :delay <ms>"}
+    end
   end
 
   defp maybe_sleep(delay_ms) when is_integer(delay_ms) and delay_ms > 0 do

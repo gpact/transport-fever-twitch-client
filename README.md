@@ -85,7 +85,7 @@ Run an interactive shell that simulates chat messages and prints bot replies:
 `mix tf2.sim`
 
 If `TF2_INTEGRATION_GAME_FILES` is not set, it uses a fresh temp folder and prints the path on start.
-Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a script of chat lines, and `:ratelimit off` to disable rate limiting.
+Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a script of chat lines, `:delay <ms>` to pause before the next command, and `:ratelimit off` to disable rate limiting.
 
 ## File protocol (with the game mod)
 
