@@ -24,3 +24,5 @@ tf2_client-*.tar
 
 # Local environment config file.
 .env
+
+mise.local.toml
