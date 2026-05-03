@@ -46,6 +46,10 @@ Run:
 
 `mix twitch.oauth.bootstrap`
 
+For the packaged Burrito executable, run:
+
+`.\tf2_client_windows.exe oauth.bootstrap`
+
 #### Releases
 
 Mix tasks are not available in releases. To bootstrap in a release, run:
@@ -57,6 +61,47 @@ Notes:
 - This opens a local browser and listens on `http://localhost:4000/oauth/callback`.
 - Tokens are stored at `~/.config/tf2_client/twitch_tokens.json` by default.
 - For headless servers, run the bootstrap on a machine with a browser and copy the token file to the server user.
+
+### Packaged Windows executable
+
+Burrito is configured with a Windows x64 target named `windows`.
+
+Build from Linux, macOS, or Windows through WSL:
+
+`MIX_ENV=prod BURRITO_TARGET=windows mix release`
+
+The distributable executable is written to:
+
+`burrito_out/tf2_client_windows.exe`
+
+Build machine requirements:
+
+- `zig` 0.15.2
+- `xz`
+- `7z` or `7zz` for Windows targets
+
+The Windows machine running the executable does not need Elixir or Erlang installed. It does need the MSVC runtime required by the bundled Erlang runtime and Windows 10 build 1511 or newer.
+
+If Windows shows `VCRUNTIME140.dll was not found`, install the Microsoft Visual C++ Redistributable x64 package from `https://aka.ms/vc14/vc_redist.x64.exe`.
+
+Set the environment variables before starting the bot. In PowerShell:
+
+```powershell
+$env:TWITCH_BOT_USER = "your_bot_username"
+$env:TWITCH_CHANNELS = "streamer_channel"
+$env:TWITCH_CLIENT_ID = "your_client_id"
+$env:TWITCH_CLIENT_SECRET = "your_client_secret"
+.\tf2_client_windows.exe
+```
+
+TF2Client packaged commands:
+
+- `.\tf2_client_windows.exe oauth.bootstrap`
+
+Burrito maintenance commands:
+
+- `.\tf2_client_windows.exe maintenance directory`
+- `.\tf2_client_windows.exe maintenance uninstall`
 
 ## Chat commands
 
