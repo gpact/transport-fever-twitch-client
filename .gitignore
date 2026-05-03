@@ -10,6 +10,9 @@
 # Where third-party dependencies like ExDoc output generated docs.
 /doc/
 
+# Burrito packaged executables.
+/burrito_out/
+
 # Temporary files, for example, from tests.
 /tmp/
 
