@@ -42,7 +42,7 @@ defmodule TF2Client.TwitchConfig do
       _ ->
         case TokenRefresher.irc_password() do
           {:ok, pass} -> {:ok, pass}
-          {:error, :missing_tokens} -> {:error, "missing Twitch OAuth tokens; run mix twitch.oauth.bootstrap"}
+          {:error, :missing_tokens} -> {:error, "missing Twitch OAuth tokens; run oauth.bootstrap"}
         end
     end
   end

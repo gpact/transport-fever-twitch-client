@@ -8,6 +8,13 @@ defmodule TF2Client.Application do
 
   @impl true
   def start(_type, _args) do
+    case TF2Client.CLI.command() do
+      :run -> start_supervisor()
+      :oauth_bootstrap -> start_oauth_bootstrap_command()
+    end
+  end
+
+  defp start_supervisor do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: TF2Client.Supervisor]
@@ -16,6 +23,27 @@ defmodule TF2Client.Application do
       start_runtime_children(supervisor)
       {:ok, supervisor}
     end
+  end
+
+  defp start_oauth_bootstrap_command do
+    pid = spawn_link(&run_oauth_bootstrap_command/0)
+    {:ok, pid}
+  end
+
+  defp run_oauth_bootstrap_command do
+    case TF2Client.Twitch.OAuthBootstrap.bootstrap!() do
+      :ok ->
+        IO.puts("Authorization complete")
+        System.halt(0)
+
+      :already_authorized ->
+        IO.puts("Authorization already present")
+        System.halt(0)
+    end
+  rescue
+    exception ->
+      IO.puts(:stderr, "Authorization failed: #{Exception.message(exception)}")
+      System.halt(1)
   end
 
   defp start_runtime_children(supervisor) do
