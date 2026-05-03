@@ -57,6 +57,7 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
     ensure_started!(:telemetry)
     ensure_started!(:plug_cowboy)
     ensure_started!(:ssl)
+    ensure_started!(:castore)
     ensure_started!(:finch)
     :ok
   end
@@ -116,7 +117,7 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
     if Process.whereis(TF2Client.Finch) do
       nil
     else
-      {:ok, pid} = Supervisor.start_link([{Finch, name: TF2Client.Finch}], strategy: :one_for_one)
+      {:ok, pid} = Supervisor.start_link([TF2Client.FinchConfig.child_spec()], strategy: :one_for_one)
       pid
     end
   end

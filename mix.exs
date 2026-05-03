@@ -27,6 +27,7 @@ defmodule TF2Client.MixProject do
       {:jason, "~> 1.4"},
       {:plug_cowboy, "~> 2.7"},
       {:finch, "~> 0.18"},
+      {:castore, "~> 1.0"},
       {:burrito, "~> 1.0", runtime: false}
     ]
   end

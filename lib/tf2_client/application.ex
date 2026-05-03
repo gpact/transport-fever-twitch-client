@@ -19,7 +19,7 @@ defmodule TF2Client.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: TF2Client.Supervisor]
 
-    with {:ok, supervisor} <- Supervisor.start_link([{Finch, name: TF2Client.Finch}], opts) do
+    with {:ok, supervisor} <- Supervisor.start_link([TF2Client.FinchConfig.child_spec()], opts) do
       start_runtime_children(supervisor)
       {:ok, supervisor}
     end

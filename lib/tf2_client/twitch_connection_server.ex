@@ -101,7 +101,9 @@ defmodule TF2Client.TwitchConnectionServer do
   end
 
   defp connect(%Conn{} = conn) do
-    case Client.connect_ssl(conn) do
+    options = TF2Client.TwitchSSLConfig.options(conn.server)
+
+    case ExIRC.Client.connect_ssl!(conn.client, conn.server, conn.port, options) do
       :ok ->
         Logger.info("[TMI.ConnectionServer] Connected to #{conn.server}:#{conn.port}...")
         :ok
