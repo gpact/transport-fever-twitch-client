@@ -7,6 +7,7 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
 
   @scopes "chat:read chat:edit channel:moderate"
   @authorize_url "https://id.twitch.tv/oauth2/authorize"
+  @default_redirect_uri "http://localhost:4000/oauth/callback"
   @timeout_ms 300_000
 
   @doc false
@@ -81,7 +82,7 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
 
   defp authorization_url do
     client_id = System.fetch_env!("TWITCH_CLIENT_ID")
-    redirect_uri = System.fetch_env!("TWITCH_REDIRECT_URI")
+    redirect_uri = redirect_uri()
 
     query =
       URI.encode_query(%{
@@ -92,6 +93,13 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
       })
 
     @authorize_url <> "?" <> query
+  end
+
+  defp redirect_uri do
+    case System.get_env("TWITCH_REDIRECT_URI") do
+      value when is_binary(value) and value != "" -> value
+      _other -> @default_redirect_uri
+    end
   end
 
   defp open_browser!(url) when is_binary(url) do

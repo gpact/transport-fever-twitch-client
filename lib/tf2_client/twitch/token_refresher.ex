@@ -3,6 +3,7 @@ defmodule TF2Client.Twitch.TokenRefresher do
 
   alias TF2Client.Twitch.TokenStore
 
+  @default_redirect_uri "http://localhost:4000/oauth/callback"
   @token_url "https://id.twitch.tv/oauth2/token"
   @refresh_margin_seconds 60
 
@@ -42,7 +43,7 @@ defmodule TF2Client.Twitch.TokenRefresher do
   def exchange_code_for_tokens!(code) when is_binary(code) do
     client_id = System.fetch_env!("TWITCH_CLIENT_ID")
     client_secret = System.fetch_env!("TWITCH_CLIENT_SECRET")
-    redirect_uri = System.fetch_env!("TWITCH_REDIRECT_URI")
+    redirect_uri = redirect_uri()
 
     params = %{
       client_id: client_id,
@@ -106,6 +107,13 @@ defmodule TF2Client.Twitch.TokenRefresher do
 
     response = post_form!(@token_url, params)
     decode_tokens!(response)
+  end
+
+  defp redirect_uri do
+    case System.get_env("TWITCH_REDIRECT_URI") do
+      value when is_binary(value) and value != "" -> value
+      _other -> @default_redirect_uri
+    end
   end
 
   defp post_form!(url, params) when is_binary(url) and is_map(params) do
