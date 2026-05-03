@@ -9,6 +9,20 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
   @authorize_url "https://id.twitch.tv/oauth2/authorize"
   @timeout_ms 300_000
 
+  @doc false
+  def browser_command_for_os(url, os_type) when is_binary(url) do
+    case os_type do
+      {:unix, :darwin} ->
+        {"open", [url]}
+
+      {:unix, _} ->
+        {"xdg-open", [url]}
+
+      {:win32, _} ->
+        {"rundll32.exe", ["url.dll,FileProtocolHandler", url]}
+    end
+  end
+
   def bootstrap! do
     store = TokenStore.default()
 
@@ -95,16 +109,7 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
   end
 
   defp browser_command(url) do
-    case :os.type() do
-      {:unix, :darwin} ->
-        {"open", [url]}
-
-      {:unix, _} ->
-        {"xdg-open", [url]}
-
-      {:win32, _} ->
-        {"cmd", ["/c", "start", "", url]}
-    end
+    browser_command_for_os(url, :os.type())
   end
 
   defp ensure_finch_supervised! do
