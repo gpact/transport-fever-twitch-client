@@ -6,17 +6,23 @@ defmodule TF2Client.RateLimiter do
   @table __MODULE__
 
   def check(key, rule) do
-    case disabled?() do
-      true ->
-        :allow
-
-      false ->
-        now = System.os_time(:second)
-        check(key, rule, now)
-    end
+    key
+    |> check_with_retry_after(rule)
+    |> simple_result()
   end
 
   def check(key, rule, now) when is_integer(now) do
+    key
+    |> check_with_retry_after(rule, now)
+    |> simple_result()
+  end
+
+  def check_with_retry_after(key, rule) do
+    now = System.os_time(:second)
+    check_with_retry_after(key, rule, now)
+  end
+
+  def check_with_retry_after(key, rule, now) when is_integer(now) do
     case disabled?() do
       true ->
         :allow
@@ -63,14 +69,14 @@ defmodule TF2Client.RateLimiter do
         :allow
 
       [_ | _] ->
-        :deny
+        {:deny, nil}
     end
   end
 
   defp check_cooldown_only(key, cooldown_seconds, now) do
     case lookup_timestamps(key) do
       [last | _] when is_integer(last) and now - last < cooldown_seconds ->
-        :deny
+        {:deny, retry_after_cooldown(last, cooldown_seconds, now)}
 
       _timestamps ->
         put_timestamps(key, [now])
@@ -88,17 +94,36 @@ defmodule TF2Client.RateLimiter do
 
     case timestamps do
       [last | _] when now - last < cooldown_seconds ->
-        :deny
+        {:deny, retry_after_cooldown(last, cooldown_seconds, now)}
 
       _ ->
-        if length(timestamps) >= max_in_window do
-          :deny
-        else
-          put_timestamps(key, [now | timestamps])
-          :allow
-        end
+        check_window_limit(key, timestamps, window_seconds, max_in_window, now)
     end
   end
+
+  defp check_window_limit(_key, timestamps, window_seconds, max_in_window, now)
+       when length(timestamps) >= max_in_window do
+    {:deny, retry_after_window(timestamps, window_seconds, now)}
+  end
+
+  defp check_window_limit(key, timestamps, _window_seconds, _max_in_window, now) do
+    put_timestamps(key, [now | timestamps])
+    :allow
+  end
+
+  defp retry_after_cooldown(last, cooldown_seconds, now) do
+    max(last + cooldown_seconds - now, 0)
+  end
+
+  defp retry_after_window(timestamps, window_seconds, now) when is_list(timestamps) do
+    case List.last(timestamps) do
+      oldest when is_integer(oldest) -> max(oldest + window_seconds - now, 0)
+      _ -> 0
+    end
+  end
+
+  defp simple_result(:allow), do: :allow
+  defp simple_result({:deny, _retry_after_seconds}), do: :deny
 
   defp lookup_timestamps(key) do
     case :ets.lookup(@table, key) do

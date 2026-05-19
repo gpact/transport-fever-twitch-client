@@ -38,39 +38,36 @@ defmodule TF2Client.Requests do
   def handle_chat_command({:profit}, sender, _chat) do
     key = {:user, normalize_username(sender), :profit}
 
-    case RateLimiter.check(key, @stats_cooldown_rule) do
-      :deny ->
-        Logger.info("Rate limit reached: profit user=#{sender}")
-        :ignore
-
+    case check_rate_limit(key, @stats_cooldown_rule, sender, "profit", "!profit", :user) do
       :allow ->
         profit_reply(sender)
+
+      {:reply, reply} ->
+        {:reply, reply}
     end
   end
 
   def handle_chat_command({:vehicles_owned}, sender, _chat) do
     key = {:user, normalize_username(sender), :vehicles_owned}
 
-    case RateLimiter.check(key, @stats_cooldown_rule) do
-      :deny ->
-        Logger.info("Rate limit reached: vehicles_owned user=#{sender}")
-        :ignore
-
+    case check_rate_limit(key, @stats_cooldown_rule, sender, "vehicles_owned", "!vehicles", :user) do
       :allow ->
         vehicles_owned_reply(sender)
+
+      {:reply, reply} ->
+        {:reply, reply}
     end
   end
 
   def handle_chat_command({:profit_rankings}, sender, _chat) do
     key = {:global, :profit_rankings}
 
-    case RateLimiter.check(key, @stats_cooldown_rule) do
-      :deny ->
-        Logger.info("Rate limit reached: profit_rankings requested_by=#{sender}")
-        :ignore
-
+    case check_rate_limit(key, @stats_cooldown_rule, sender, "profit_rankings", "!rank", :global) do
       :allow ->
         profit_rankings_reply(sender)
+
+      {:reply, reply} ->
+        {:reply, reply}
     end
   end
 
@@ -107,26 +104,24 @@ defmodule TF2Client.Requests do
   def handle_chat_command({:line, carrier, cargo}, sender, chat) do
     key = {:user, normalize_username(sender), :purchase_line}
 
-    case RateLimiter.check(key, @purchase_rate_rule) do
-      :deny ->
-        Logger.info("Rate limit reached: purchase_line user=#{sender}")
-        :ignore
-
+    case check_rate_limit(key, @purchase_rate_rule, sender, "purchase_line", "!line", :user) do
       :allow ->
         submit("LINE", sender, chat, %{carrier: carrier, cargo: cargo})
+
+      {:reply, reply} ->
+        {:reply, reply}
     end
   end
 
   def handle_chat_command({:vehicle, carrier, cargo}, sender, chat) do
     key = {:user, normalize_username(sender), :purchase_vehicle}
 
-    case RateLimiter.check(key, @purchase_rate_rule) do
-      :deny ->
-        Logger.info("Rate limit reached: purchase_vehicle user=#{sender}")
-        :ignore
-
+    case check_rate_limit(key, @purchase_rate_rule, sender, "purchase_vehicle", "!vehicle", :user) do
       :allow ->
         submit("VEHICLE", sender, chat, %{carrier: carrier, cargo: cargo})
+
+      {:reply, reply} ->
+        {:reply, reply}
     end
   end
 
@@ -260,6 +255,45 @@ defmodule TF2Client.Requests do
     action = action_description(type, params)
     "@#{sender} got it! I'll try to #{action}."
   end
+
+  defp check_rate_limit(key, rule, sender, log_label, command_name, scope)
+       when is_binary(sender) and is_binary(log_label) and is_binary(command_name) do
+    case RateLimiter.check_with_retry_after(key, rule) do
+      :allow ->
+        :allow
+
+      {:deny, retry_after_seconds} ->
+        Logger.info("Rate limit reached: #{log_label} user=#{sender}")
+        {:reply, rate_limit_reply(sender, command_name, retry_after_seconds, scope)}
+    end
+  end
+
+  defp rate_limit_reply(sender, command_name, retry_after_seconds, :global) do
+    duration = format_cooldown_duration(retry_after_seconds)
+    "@#{sender} #{command_name} is on cooldown for everyone for the next #{duration}."
+  end
+
+  defp rate_limit_reply(sender, command_name, retry_after_seconds, :user) do
+    duration = format_cooldown_duration(retry_after_seconds)
+    "@#{sender} #{command_name} is on cooldown for you for the next #{duration}."
+  end
+
+  defp format_cooldown_duration(retry_after_seconds) when is_integer(retry_after_seconds) do
+    retry_after_seconds
+    |> cooldown_minutes()
+    |> format_minutes()
+  end
+
+  defp format_cooldown_duration(_retry_after_seconds), do: "a while"
+
+  defp cooldown_minutes(seconds) when seconds > 0 do
+    div(seconds + 59, 60)
+  end
+
+  defp cooldown_minutes(_seconds), do: 1
+
+  defp format_minutes(1), do: "1 minute"
+  defp format_minutes(minutes), do: "#{minutes} minutes"
 
   defp normalize_params(params) when is_map(params) do
     params

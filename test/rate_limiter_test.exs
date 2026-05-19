@@ -30,6 +30,15 @@ defmodule TF2Client.RateLimiterTest do
     assert :allow = RateLimiter.check(key, rule, 1_060)
   end
 
+  test "reports cooldown retry time" do
+    key = {:user, "alice", :vehicles}
+    rule = %{cooldown_seconds: 60}
+
+    assert :allow = RateLimiter.check_with_retry_after(key, rule, 1_000)
+    assert {:deny, 30} = RateLimiter.check_with_retry_after(key, rule, 1_030)
+    assert {:deny, 1} = RateLimiter.check_with_retry_after(key, rule, 1_059)
+  end
+
   test "enforces cooldown + max per window" do
     key = {:user, "alice", :purchase_vehicle}
 
@@ -49,11 +58,27 @@ defmodule TF2Client.RateLimiterTest do
     assert :allow = RateLimiter.check(key, rule, 5_000)
   end
 
+  test "reports window retry time" do
+    key = {:user, "alice", :purchase_vehicle}
+
+    rule = %{
+      cooldown_seconds: 300,
+      window_seconds: 3_600,
+      max_in_window: 3
+    }
+
+    assert :allow = RateLimiter.check_with_retry_after(key, rule, 1_000)
+    assert :allow = RateLimiter.check_with_retry_after(key, rule, 1_300)
+    assert :allow = RateLimiter.check_with_retry_after(key, rule, 1_600)
+    assert {:deny, 2_700} = RateLimiter.check_with_retry_after(key, rule, 1_900)
+  end
+
   test "allows everything when rate limiting is disabled" do
     Application.put_env(:tf2_client, :disable_rate_limits, true)
     key = {:user, "alice", :purchase_vehicle}
 
     assert :allow = RateLimiter.check(key, :once, 1_000)
     assert :allow = RateLimiter.check(key, :once, 1_001)
+    assert :allow = RateLimiter.check_with_retry_after(key, :once, 1_001)
   end
 end
