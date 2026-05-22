@@ -74,6 +74,14 @@ The distributable executable is written to:
 
 `burrito_out/tf2_client_windows.exe`
 
+Burrito production binaries unpack the embedded release on first run and reuse that unpacked payload for later runs of the same app version. If you rebuild with code changes but keep the same `version` in `mix.exs`, Windows may keep running the previously unpacked code. For normal releases, bump the project version before building. For local verification of a rebuilt same-version binary, run:
+
+`.\tf2_client_windows.exe maintenance uninstall`
+
+Then start the executable again so Burrito unpacks the new payload. You can inspect the unpacked runtime path with:
+
+`.\tf2_client_windows.exe maintenance directory`
+
 Build machine requirements:
 
 - `zig` 0.15.2

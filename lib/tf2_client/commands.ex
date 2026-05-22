@@ -3,7 +3,8 @@ defmodule TF2Client.Commands do
 
   @command_flag "!"
 
-  @valid_carriers Enum.map(TF2Client.Game.carrier_types(), &String.upcase(to_string(&1)))
+  @valid_carriers Enum.map(TF2Client.Game.carrier_types(), &to_string/1)
+  @valid_cargo Enum.map(TF2Client.Game.cargo_types(), &to_string/1)
 
   @pausable_commands [:claim, :town, :line, :vehicle]
 
@@ -166,14 +167,10 @@ defmodule TF2Client.Commands do
   defp parse_carrier_cargo(kind, rest) do
     case String.split(rest, ~r/\s+/, parts: 2, trim: true) do
       [carrier, cargo] ->
-        carrier = carrier |> String.trim() |> String.upcase()
-        cargo = cargo |> String.trim() |> String.upcase() |> normalize_cargo()
+        carrier = normalize_game_type(carrier)
+        cargo = normalize_cargo(normalize_game_type(cargo))
 
-        if carrier in @valid_carriers do
-          {:ok, {kind, carrier, cargo}}
-        else
-          {:error, "invalid carrier #{carrier}. Use: #{Enum.join(@valid_carriers, ", ")}"}
-        end
+        validate_carrier_cargo(kind, carrier, cargo)
 
       _ ->
         usage =
@@ -186,8 +183,29 @@ defmodule TF2Client.Commands do
     end
   end
 
-  defp normalize_cargo("PASSENGER"), do: "PASSENGERS"
+  defp normalize_game_type(value) when is_binary(value) do
+    value = String.trim(value)
+    String.downcase(value)
+  end
+
+  defp normalize_cargo("passenger"), do: "passengers"
   defp normalize_cargo(cargo), do: cargo
+
+  defp validate_carrier_cargo(kind, carrier, cargo) do
+    case {carrier in @valid_carriers, cargo in @valid_cargo} do
+      {true, true} -> {:ok, {kind, carrier, cargo}}
+      {false, _cargo_valid?} -> {:error, invalid_carrier_message(carrier)}
+      {true, false} -> {:error, invalid_cargo_message(cargo)}
+    end
+  end
+
+  defp invalid_carrier_message(carrier) do
+    "invalid carrier #{carrier}. Use: #{Enum.join(@valid_carriers, ", ")}"
+  end
+
+  defp invalid_cargo_message(cargo) do
+    "invalid cargo #{cargo}. Use: #{Enum.join(@valid_cargo, ", ")}"
+  end
 
   defp command_name_from_flagged(message) do
     raw = String.trim_leading(message, @command_flag)
