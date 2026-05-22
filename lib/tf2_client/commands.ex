@@ -6,11 +6,12 @@ defmodule TF2Client.Commands do
   @valid_carriers Enum.map(TF2Client.Game.carrier_types(), &to_string/1)
   @valid_cargo Enum.map(TF2Client.Game.cargo_types(), &to_string/1)
 
-  @pausable_commands [:claim, :town, :line, :vehicle]
+  @pausable_commands [:claim, :town, :town_rename, :line, :vehicle]
 
   @pausable_command_names %{
     "claim" => :claim,
     "town" => :town,
+    "townname" => :town_rename,
     "line" => :line,
     "vehicle" => :vehicle
   }
@@ -28,6 +29,7 @@ defmodule TF2Client.Commands do
     [
       "!claim [company name]",
       "!town [name]",
+      "!townname <name>",
       "!line <carrier> <cargo>",
       "!vehicle <carrier> <cargo>",
       "!carriers",
@@ -38,8 +40,8 @@ defmodule TF2Client.Commands do
       "!tf2on",
       "!tf2off",
       "!paused",
-      "!pause <claim|town|line|vehicle|all>",
-      "!resume <claim|town|line|vehicle|all>"
+      "!pause <claim|town|townname|line|vehicle|all>",
+      "!resume <claim|town|townname|line|vehicle|all>"
     ]
   end
 
@@ -78,6 +80,7 @@ defmodule TF2Client.Commands do
 
   def pausable_command_key({:claim, _}), do: :claim
   def pausable_command_key({:town, _}), do: :town
+  def pausable_command_key({:town_rename, _}), do: :town_rename
   def pausable_command_key({:line, _, _}), do: :line
   def pausable_command_key({:vehicle, _, _}), do: :vehicle
   def pausable_command_key(_), do: nil
@@ -153,6 +156,12 @@ defmodule TF2Client.Commands do
       ["town", name] ->
         {:ok, {:town, String.trim(name)}}
 
+      ["townname"] ->
+        {:error, "usage: !townname <name>"}
+
+      ["townname", name] ->
+        {:ok, {:town_rename, String.trim(name)}}
+
       ["line", rest] ->
         parse_carrier_cargo(:line, rest)
 
@@ -223,6 +232,6 @@ defmodule TF2Client.Commands do
     end
   end
 
-  defp pause_usage(:pause), do: "!pause <claim|town|line|vehicle|all>"
-  defp pause_usage(:resume), do: "!resume <claim|town|line|vehicle|all>"
+  defp pause_usage(:pause), do: "!pause <claim|town|townname|line|vehicle|all>"
+  defp pause_usage(:resume), do: "!resume <claim|town|townname|line|vehicle|all>"
 end

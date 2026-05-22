@@ -41,6 +41,12 @@ defmodule TF2Client.CommandsTest do
     assert {:ok, {:town, "Town Co"}} = Commands.parse("!town Town Co")
   end
 
+  test "parses town rename" do
+    assert {:ok, {:town_rename, "New Town"}} = Commands.parse("!townname New Town")
+    assert {:error, "usage: !townname <name>"} = Commands.parse("!townname")
+    assert :town_rename = Commands.pausable_command_name("townname")
+  end
+
   test "parses line and vehicle" do
     assert {:ok, {:line, "road", "stone"}} = Commands.parse("!line road stone")
     assert {:ok, {:vehicle, "rail", "passengers"}} = Commands.parse("!vehicle RAIL passengers")

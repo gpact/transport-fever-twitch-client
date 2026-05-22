@@ -13,6 +13,7 @@ defmodule TF2Client.RequestQueue do
   @default_delays_ms %{
     "COMPANY" => 0,
     "TOWN" => 5_000,
+    "TOWN_RENAME" => 0,
     "LINE" => 0,
     "VEHICLE" => 0
   }

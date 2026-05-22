@@ -226,6 +226,7 @@ defmodule TF2Client.Bot do
 
   defp pause_label(:claim), do: "company claims"
   defp pause_label(:town), do: "town purchases"
+  defp pause_label(:town_rename), do: "town renames"
   defp pause_label(:line), do: "line purchases"
   defp pause_label(:vehicle), do: "vehicle purchases"
   defp pause_label(other), do: Atom.to_string(other)

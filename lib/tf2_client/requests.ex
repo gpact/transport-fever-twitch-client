@@ -101,6 +101,20 @@ defmodule TF2Client.Requests do
     end
   end
 
+  def handle_chat_command({:town_rename, town_name}, sender, chat) do
+    case GameState.read() do
+      {:ok, game_state} ->
+        if GameState.town_purchased?(game_state, sender) do
+          submit("TOWN_RENAME", sender, chat, %{town_name: town_name})
+        else
+          {:reply, "@#{sender} you need to own a town before renaming it."}
+        end
+
+      {:error, _reason} ->
+        submit("TOWN_RENAME", sender, chat, %{town_name: town_name})
+    end
+  end
+
   def handle_chat_command({:line, carrier, cargo}, sender, chat) do
     key = {:user, normalize_username(sender), :purchase_line}
 
@@ -313,8 +327,11 @@ defmodule TF2Client.Requests do
 
   defp action_description("TOWN", _params), do: "get you a town"
 
-  defp action_description("LINE", %{carrier: carrier, cargo: cargo})
-       when is_binary(carrier) and carrier != "" and is_binary(cargo) and cargo != "" do
+  defp action_description("TOWN_RENAME", %{town_name: <<_, _::binary>> = name}) do
+    ~s(rename your town to "#{name}")
+  end
+
+  defp action_description("LINE", %{carrier: <<_, _::binary>> = carrier, cargo: <<_, _::binary>> = cargo}) do
     carrier = String.downcase(carrier)
     cargo = String.downcase(cargo)
     "set up a #{carrier} line for #{cargo}"
