@@ -175,31 +175,13 @@ defmodule TF2Client.Bot do
   end
 
   defp broadcaster_or_mod?(sender, chat, tags) when is_binary(sender) and is_binary(chat) and is_map(tags) do
-    mod = truthy_tag?(tags, "mod") or truthy_tag?(tags, :mod)
-    broadcaster = broadcaster_badge?(tags) or sender_is_channel_owner?(sender, chat)
-    mod or broadcaster
-  end
-
-  defp truthy_tag?(tags, key) do
-    case Map.get(tags, key) do
-      true -> true
-      1 -> true
-      "1" -> true
-      "true" -> true
-      "TRUE" -> true
-      _ -> false
-    end
+    Map.get(tags, "mod") == "1" or broadcaster_badge?(tags) or sender_is_channel_owner?(sender, chat)
   end
 
   defp broadcaster_badge?(tags) do
-    badges =
-      case Map.get(tags, "badges") do
-        value when is_binary(value) -> value
-        _ -> Map.get(tags, :badges)
-      end
-
-    case badges do
-      value when is_binary(value) -> String.contains?(value, "broadcaster/")
+    with badges when is_binary(badges) <- Map.get(tags, "badges") do
+      String.contains?(badges, "broadcaster/")
+    else
       _ -> false
     end
   end
