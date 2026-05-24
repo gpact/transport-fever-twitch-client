@@ -34,7 +34,7 @@ defmodule TF2Client.Bot do
         maybe_resume(chat, sender, tags, target)
 
       {:ok, command} ->
-        maybe_handle_command(chat, sender, command)
+        maybe_handle_command(chat, sender, command, tags)
 
       {:error, error} when is_binary(error) ->
         maybe_report_error(chat, sender, message, error)
@@ -121,7 +121,7 @@ defmodule TF2Client.Bot do
     end
   end
 
-  defp maybe_handle_command(chat, sender, command) do
+  defp maybe_handle_command(chat, sender, command, tags) do
     case ChatbotState.enabled?(chat) do
       true ->
         case paused_command?(chat, command) do
@@ -129,7 +129,7 @@ defmodule TF2Client.Bot do
             :ok
 
           false ->
-            case Requests.handle_chat_command(command, sender, chat) do
+            case Requests.handle_chat_command(command, sender, chat, tags) do
               :ignore -> :ok
               {:reply, reply} when is_binary(reply) -> say(chat, reply)
             end

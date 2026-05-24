@@ -23,19 +23,23 @@ defmodule TF2Client.Requests do
 
   @stats_cooldown_rule %{cooldown_seconds: 60}
 
-  def handle_chat_command({:help}, _sender, _chat) do
+  def handle_chat_command(command, sender, chat) do
+    handle_chat_command(command, sender, chat, %{})
+  end
+
+  def handle_chat_command({:help}, _sender, _chat, _tags) do
     {:reply, "Commands: #{Enum.join(@available_command_examples, " • ")}"}
   end
 
-  def handle_chat_command({:carriers}, _sender, _chat) do
+  def handle_chat_command({:carriers}, _sender, _chat, _tags) do
     {:reply, "Carrier types: #{Enum.join(@carrier_types, ", ")}"}
   end
 
-  def handle_chat_command({:cargo}, _sender, _chat) do
+  def handle_chat_command({:cargo}, _sender, _chat, _tags) do
     {:reply, "Cargo types: #{Enum.join(@cargo_types, ", ")}"}
   end
 
-  def handle_chat_command({:profit}, sender, _chat) do
+  def handle_chat_command({:profit}, sender, _chat, _tags) do
     key = {:user, normalize_username(sender), :profit}
 
     case check_rate_limit(key, @stats_cooldown_rule, sender, "profit", "!profit", :user) do
@@ -47,7 +51,7 @@ defmodule TF2Client.Requests do
     end
   end
 
-  def handle_chat_command({:vehicles_owned}, sender, _chat) do
+  def handle_chat_command({:vehicles_owned}, sender, _chat, _tags) do
     key = {:user, normalize_username(sender), :vehicles_owned}
 
     case check_rate_limit(key, @stats_cooldown_rule, sender, "vehicles_owned", "!vehicles", :user) do
@@ -59,7 +63,7 @@ defmodule TF2Client.Requests do
     end
   end
 
-  def handle_chat_command({:profit_rankings}, sender, _chat) do
+  def handle_chat_command({:profit_rankings}, sender, _chat, _tags) do
     key = {:global, :profit_rankings}
 
     case check_rate_limit(key, @stats_cooldown_rule, sender, "profit_rankings", "!rank", :global) do
@@ -71,7 +75,7 @@ defmodule TF2Client.Requests do
     end
   end
 
-  def handle_chat_command({:claim, company_name}, sender, chat) do
+  def handle_chat_command({:claim, company_name}, sender, chat, _tags) do
     case GameState.read() do
       {:ok, game_state} ->
         if GameState.company_claimed?(game_state, sender) do
@@ -86,7 +90,7 @@ defmodule TF2Client.Requests do
     end
   end
 
-  def handle_chat_command({:town, company_name}, sender, chat) do
+  def handle_chat_command({:town, company_name}, sender, chat, _tags) do
     case GameState.read() do
       {:ok, game_state} ->
         if GameState.town_purchased?(game_state, sender) do
@@ -101,7 +105,7 @@ defmodule TF2Client.Requests do
     end
   end
 
-  def handle_chat_command({:town_rename, town_name}, sender, chat) do
+  def handle_chat_command({:town_rename, town_name}, sender, chat, _tags) do
     case GameState.read() do
       {:ok, game_state} ->
         if GameState.town_purchased?(game_state, sender) do
@@ -115,31 +119,31 @@ defmodule TF2Client.Requests do
     end
   end
 
-  def handle_chat_command({:line, carrier, cargo}, sender, chat) do
+  def handle_chat_command({:line, carrier, cargo}, sender, chat, tags) do
     key = {:user, normalize_username(sender), :purchase_line}
 
     case check_rate_limit(key, @purchase_rate_rule, sender, "purchase_line", "!line", :user) do
       :allow ->
-        submit("LINE", sender, chat, %{carrier: carrier, cargo: cargo})
+        submit("LINE", sender, chat, purchase_params(carrier, cargo, tags))
 
       {:reply, reply} ->
         {:reply, reply}
     end
   end
 
-  def handle_chat_command({:vehicle, carrier, cargo}, sender, chat) do
+  def handle_chat_command({:vehicle, carrier, cargo}, sender, chat, tags) do
     key = {:user, normalize_username(sender), :purchase_vehicle}
 
     case check_rate_limit(key, @purchase_rate_rule, sender, "purchase_vehicle", "!vehicle", :user) do
       :allow ->
-        submit("VEHICLE", sender, chat, %{carrier: carrier, cargo: cargo})
+        submit("VEHICLE", sender, chat, purchase_params(carrier, cargo, tags))
 
       {:reply, reply} ->
         {:reply, reply}
     end
   end
 
-  def handle_chat_command(_other, _sender, _chat), do: :ignore
+  def handle_chat_command(_other, _sender, _chat, _tags), do: :ignore
 
   defp profit_reply(sender) do
     case GameState.read() do
@@ -313,6 +317,48 @@ defmodule TF2Client.Requests do
     params
     |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
     |> Map.new()
+  end
+
+  defp purchase_params(carrier, cargo, tags) do
+    params = %{carrier: carrier, cargo: cargo}
+
+    case twitch_color(tags) do
+      nil -> params
+      color -> Map.put(params, :color, color)
+    end
+  end
+
+  defp twitch_color(%{"color" => color}) when is_binary(color) do
+    parse_hex_color(color)
+  end
+
+  defp twitch_color(_tags), do: nil
+
+  defp parse_hex_color("#" <> hex) when byte_size(hex) == 6 do
+    with {:ok, red} <- parse_hex_component(binary_part(hex, 0, 2)),
+         {:ok, green} <- parse_hex_component(binary_part(hex, 2, 2)),
+         {:ok, blue} <- parse_hex_component(binary_part(hex, 4, 2)) do
+      %{
+        red: normalize_color_component(red),
+        green: normalize_color_component(green),
+        blue: normalize_color_component(blue)
+      }
+    else
+      :error -> nil
+    end
+  end
+
+  defp parse_hex_color(_color), do: nil
+
+  defp parse_hex_component(hex) when is_binary(hex) do
+    case Integer.parse(hex, 16) do
+      {value, ""} when value >= 0 and value <= 255 -> {:ok, value}
+      _other -> :error
+    end
+  end
+
+  defp normalize_color_component(value) when is_integer(value) do
+    value / 255
   end
 
   defp action_description("COMPANY", %{company_name: name}) when is_binary(name) and name != "" do

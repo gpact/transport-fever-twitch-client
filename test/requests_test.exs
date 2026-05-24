@@ -3,16 +3,76 @@ defmodule TF2Client.RequestsTest do
 
   alias TF2Client.RateLimiter
   alias TF2Client.Requests
+  alias TF2Client.RequestTracker
+
+  @game_files_env "TF2_INTEGRATION_GAME_FILES"
 
   setup do
-    previous = Application.get_env(:tf2_client, :disable_rate_limits)
+    previous_disable_rate_limits = Application.get_env(:tf2_client, :disable_rate_limits)
+    previous_request_queue_delays = Application.get_env(:tf2_client, :request_queue_delays_ms)
+    previous_game_files_dir = System.get_env(@game_files_env)
+
     RateLimiter.reset()
+    Application.put_env(:tf2_client, :request_queue_delays_ms, %{})
 
     on_exit(fn ->
-      Application.put_env(:tf2_client, :disable_rate_limits, previous)
+      restore_app_env(:disable_rate_limits, previous_disable_rate_limits)
+      restore_app_env(:request_queue_delays_ms, previous_request_queue_delays)
+      restore_game_files_env(previous_game_files_dir)
     end)
 
     :ok
+  end
+
+  test "sends normalized Twitch color on vehicle purchases" do
+    dir = prepare_game_files()
+    ensure_request_tracker_started()
+
+    tags = %{"color" => "#3BC43B"}
+
+    assert {:reply, "@alice got it! I'll try to add a road vehicle for stone."} =
+             Requests.handle_chat_command({:vehicle, "road", "stone"}, "alice", "somechannel", tags)
+
+    lua = read_submitted_lua(dir)
+
+    assert String.contains?(lua, ~s(request_type = "VEHICLE"))
+    assert String.contains?(lua, "color = {")
+    assert String.contains?(lua, "red = #{59 / 255}")
+    assert String.contains?(lua, "green = #{196 / 255}")
+    assert String.contains?(lua, "blue = #{59 / 255}")
+  end
+
+  test "sends normalized Twitch color on line purchases" do
+    dir = prepare_game_files()
+    ensure_request_tracker_started()
+
+    tags = %{"color" => "#0000ff"}
+
+    assert {:reply, "@alice got it! I'll try to set up a road line for stone."} =
+             Requests.handle_chat_command({:line, "road", "stone"}, "alice", "somechannel", tags)
+
+    lua = read_submitted_lua(dir)
+
+    assert String.contains?(lua, ~s(request_type = "LINE"))
+    assert String.contains?(lua, "color = {")
+    assert String.contains?(lua, "red = 0.0")
+    assert String.contains?(lua, "green = 0.0")
+    assert String.contains?(lua, "blue = 1.0")
+  end
+
+  test "ignores invalid Twitch color on purchases" do
+    dir = prepare_game_files()
+    ensure_request_tracker_started()
+
+    tags = %{"color" => "not-a-color"}
+
+    assert {:reply, "@alice got it! I'll try to add a road vehicle for stone."} =
+             Requests.handle_chat_command({:vehicle, "road", "stone"}, "alice", "somechannel", tags)
+
+    lua = read_submitted_lua(dir)
+
+    assert String.contains?(lua, ~s(request_type = "VEHICLE"))
+    refute String.contains?(lua, "color =")
   end
 
   test "replies when a user hits a vehicle cooldown" do
@@ -49,4 +109,40 @@ defmodule TF2Client.RequestsTest do
     assert {:reply, "@bob !rank is on cooldown for everyone for the next 1 minute."} =
              Requests.handle_chat_command({:profit_rankings}, "bob", "somechannel")
   end
+
+  defp prepare_game_files do
+    dir = temp_dir()
+    File.mkdir_p!(dir)
+    File.write!(Path.join(dir, "gameState.json"), ~s({"save_uuid":"save-123"}))
+    System.put_env(@game_files_env, dir)
+
+    on_exit(fn -> File.rm_rf(dir) end)
+
+    dir
+  end
+
+  defp ensure_request_tracker_started do
+    case Process.whereis(RequestTracker) do
+      nil -> start_supervised!(RequestTracker)
+      _pid -> :ok
+    end
+  end
+
+  defp read_submitted_lua(dir) do
+    requests = File.read!(Path.join(dir, "requests.txt"))
+    [order_id] = String.split(requests, "\n", trim: true)
+    File.read!(Path.join(dir, "#{order_id}.lua"))
+  end
+
+  defp temp_dir do
+    random_bytes = :crypto.strong_rand_bytes(6)
+    suffix = Base.encode16(random_bytes, case: :lower)
+    Path.join(System.tmp_dir!(), "tf2-client-requests-test-#{suffix}")
+  end
+
+  defp restore_app_env(key, nil), do: Application.delete_env(:tf2_client, key)
+  defp restore_app_env(key, value), do: Application.put_env(:tf2_client, key, value)
+
+  defp restore_game_files_env(nil), do: System.delete_env(@game_files_env)
+  defp restore_game_files_env(value), do: System.put_env(@game_files_env, value)
 end
