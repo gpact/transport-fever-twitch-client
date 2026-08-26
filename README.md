@@ -12,7 +12,7 @@ To use the OAuth bootstrap/refresh flow you need to create a Twitch Developer ap
 
 1. Go to `https://dev.twitch.tv/console/apps` and create a new application.
 2. Set the OAuth Redirect URL to `http://localhost:4000/oauth/callback` (must match `TWITCH_REDIRECT_URI`).
-3. Copy the `Client ID` and generate/copy the `Client Secret`.
+3. After creation, click `Manage`, then copy the `Client ID` and generate/copy the `Client Secret`.
 4. Set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` in your environment.
 
 If you rotate the client secret or revoke access, delete the stored token file and run the bootstrap again.
@@ -31,14 +31,6 @@ If you rotate the client secret or revoke access, delete the stored token file a
 - `TWITCH_CLIENT_ID`: Twitch OAuth client id (required for OAuth bootstrap/refresh)
 - `TWITCH_CLIENT_SECRET`: Twitch OAuth client secret (required for OAuth bootstrap/refresh)
 - `TWITCH_REDIRECT_URI`: OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
-
-### Run
-
-Start the game with the mod enabled so it can create/update `gameState.json` in the shared game files folder, then run:
-
-`iex -S mix`
-
-By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster.
 
 ### OAuth bootstrap (one-time)
 
@@ -61,6 +53,14 @@ Notes:
 - This opens a local browser and listens on `http://localhost:4000/oauth/callback`.
 - Tokens are stored at `~/.config/tf2_client/twitch_tokens.json` by default.
 - For headless servers, run the bootstrap on a machine with a browser and copy the token file to the server user.
+
+### Run
+
+Start the game with the mod enabled so it can create/update `gameState.json` in the shared game files folder, then run:
+
+`iex -S mix`
+
+By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster.
 
 ### Packaged Windows executable
 
