@@ -9,6 +9,7 @@ defmodule TF2Client.Twitch.TokenStore do
 
   @callback load() :: {:ok, token_map()} | :error
   @callback save(token_map()) :: :ok
+  @callback delete() :: :ok
 
   def default, do: TF2Client.Twitch.FileTokenStore
 end

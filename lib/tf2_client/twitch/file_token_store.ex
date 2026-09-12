@@ -39,6 +39,12 @@ defmodule TF2Client.Twitch.FileTokenStore do
 
   def save(_other), do: :ok
 
+  @impl true
+  def delete do
+    File.rm(tokens_path())
+    :ok
+  end
+
   defp parse_tokens(json) when is_binary(json) do
     case Jason.decode(json) do
       {:ok, %{} = decoded} ->

@@ -1,9 +1,9 @@
 defmodule TF2Client.Twitch.TokenRefresher do
   @moduledoc false
 
+  alias TF2Client.Config
   alias TF2Client.Twitch.TokenStore
 
-  @default_redirect_uri "http://localhost:4000/oauth/callback"
   @token_url "https://id.twitch.tv/oauth2/token"
   @refresh_margin_seconds 60
 
@@ -18,8 +18,13 @@ defmodule TF2Client.Twitch.TokenRefresher do
 
     case store.load() do
       {:ok, tokens} ->
-        tokens = refresh_if_needed!(tokens, store)
-        {:ok, tokens.access_token}
+        case refresh_if_needed(tokens, store) do
+          {:ok, refreshed_tokens} ->
+            {:ok, refreshed_tokens.access_token}
+
+          {:error, _reason} ->
+            {:error, :missing_tokens}
+        end
 
       :error ->
         {:error, :missing_tokens}
@@ -31,9 +36,15 @@ defmodule TF2Client.Twitch.TokenRefresher do
 
     case store.load() do
       {:ok, tokens} ->
-        refreshed = refresh_tokens!(tokens.refresh_token)
-        store.save(refreshed)
-        {:ok, refreshed}
+        case refresh_tokens(tokens.refresh_token) do
+          {:ok, refreshed} ->
+            store.save(refreshed)
+            {:ok, refreshed}
+
+          {:error, reason} ->
+            store.delete()
+            {:error, reason}
+        end
 
       :error ->
         {:error, :missing_tokens}
@@ -41,9 +52,9 @@ defmodule TF2Client.Twitch.TokenRefresher do
   end
 
   def exchange_code_for_tokens!(code) when is_binary(code) do
-    client_id = System.fetch_env!("TWITCH_CLIENT_ID")
-    client_secret = System.fetch_env!("TWITCH_CLIENT_SECRET")
-    redirect_uri = redirect_uri()
+    client_id = Config.client_id()
+    client_secret = Config.client_secret()
+    redirect_uri = Config.redirect_uri()
 
     params = %{
       client_id: client_id,
@@ -53,8 +64,19 @@ defmodule TF2Client.Twitch.TokenRefresher do
       redirect_uri: redirect_uri
     }
 
-    response = post_form!(@token_url, params)
-    decode_tokens!(response)
+    case post_form(@token_url, params) do
+      {:ok, %Finch.Response{status: 200} = response} ->
+        case decode_tokens(response) do
+          {:ok, tokens} -> tokens
+          {:error, reason} -> raise "Twitch token response was invalid: #{inspect(reason)}"
+        end
+
+      {:ok, %Finch.Response{status: status, body: body}} ->
+        raise "Twitch token exchange failed with HTTP status #{status}: #{body}"
+
+      {:error, reason} ->
+        raise "Twitch token exchange failed: #{inspect(reason)}"
+    end
   end
 
   def request_with_bearer(method, url, headers, body \\ nil)
@@ -80,23 +102,31 @@ defmodule TF2Client.Twitch.TokenRefresher do
     end
   end
 
-  defp refresh_if_needed!(%{expires_at: expires_at} = tokens, store) when is_integer(expires_at) do
+  defp refresh_if_needed(%{expires_at: expires_at} = tokens, store) when is_integer(expires_at) do
     now = System.os_time(:second)
 
-    if expires_at - now <= @refresh_margin_seconds do
-      refreshed = refresh_tokens!(tokens.refresh_token)
-      store.save(refreshed)
-      refreshed
-    else
-      tokens
+    case expires_at - now <= @refresh_margin_seconds do
+      true ->
+        case refresh_tokens(tokens.refresh_token) do
+          {:ok, refreshed} ->
+            store.save(refreshed)
+            {:ok, refreshed}
+
+          {:error, reason} ->
+            store.delete()
+            {:error, reason}
+        end
+
+      false ->
+        {:ok, tokens}
     end
   end
 
-  defp refresh_if_needed!(tokens, _store), do: tokens
+  defp refresh_if_needed(tokens, _store), do: {:ok, tokens}
 
-  defp refresh_tokens!(refresh_token) when is_binary(refresh_token) do
-    client_id = System.fetch_env!("TWITCH_CLIENT_ID")
-    client_secret = System.fetch_env!("TWITCH_CLIENT_SECRET")
+  defp refresh_tokens(refresh_token) when is_binary(refresh_token) do
+    client_id = Config.client_id()
+    client_secret = Config.client_secret()
 
     params = %{
       client_id: client_id,
@@ -105,50 +135,58 @@ defmodule TF2Client.Twitch.TokenRefresher do
       refresh_token: refresh_token
     }
 
-    response = post_form!(@token_url, params)
-    decode_tokens!(response)
-  end
+    case post_form(@token_url, params) do
+      {:ok, response} ->
+        decode_tokens(response)
 
-  defp redirect_uri do
-    case System.get_env("TWITCH_REDIRECT_URI") do
-      value when is_binary(value) and value != "" -> value
-      _other -> @default_redirect_uri
+      other ->
+        other
     end
   end
 
-  defp post_form!(url, params) when is_binary(url) and is_map(params) do
+  defp post_form(url, params) when is_binary(url) and is_map(params) do
     headers = [{"content-type", "application/x-www-form-urlencoded"}]
     body = URI.encode_query(params)
     request = Finch.build(:post, url, headers, body)
 
     case Finch.request(request, TF2Client.Finch) do
       {:ok, %Finch.Response{status: 200} = response} ->
-        response
+        {:ok, response}
 
-      {:ok, %Finch.Response{status: status}} ->
-        raise "Twitch token request failed with HTTP status #{status}."
+      {:ok, %Finch.Response{} = response} ->
+        {:ok, response}
 
-      {:error, _reason} ->
-        raise "Twitch token request failed."
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  defp decode_tokens!(%Finch.Response{body: body}) when is_binary(body) do
-    decoded =
-      case Jason.decode(body) do
-        {:ok, %{} = json} -> json
-        _ -> raise "Twitch token response was not valid JSON."
-      end
+  defp decode_tokens(%Finch.Response{status: 200, body: body}) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, %{} = json} ->
+        extract_token_fields(json)
 
-    access_token = decoded |> Map.get("access_token") |> normalize_optional_string()
-    refresh_token = decoded |> Map.get("refresh_token") |> normalize_optional_string()
-    expires_in = decoded |> Map.get("expires_in") |> normalize_integer()
+      _ ->
+        {:error, :invalid_json}
+    end
+  end
 
-    if is_binary(access_token) and is_binary(refresh_token) and is_integer(expires_in) do
-      now = System.os_time(:second)
-      %{access_token: access_token, refresh_token: refresh_token, expires_at: now + expires_in}
-    else
-      raise "Twitch token response was missing required fields."
+  defp decode_tokens(%Finch.Response{status: status, body: body}) do
+    {:error, {:http_error, status, body}}
+  end
+
+  defp extract_token_fields(json) when is_map(json) do
+    access_token = normalize_optional_string(Map.get(json, "access_token"))
+    refresh_token = normalize_optional_string(Map.get(json, "refresh_token"))
+    expires_in = normalize_integer(Map.get(json, "expires_in"))
+
+    case {access_token, refresh_token, expires_in} do
+      {at, rt, exp} when is_binary(at) and is_binary(rt) and is_integer(exp) ->
+        now = System.os_time(:second)
+        {:ok, %{access_token: at, refresh_token: rt, expires_at: now + exp}}
+
+      _other ->
+        {:error, :missing_fields}
     end
   end
 

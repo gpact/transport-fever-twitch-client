@@ -1,0 +1,9 @@
+{
+  "bot_user": "your_bot_username",
+  "channels": ["streamer_channel"],
+  "client_id": "your_twitch_client_id",
+  "client_secret": "your_twitch_client_secret",
+  "mod_channels": [],
+  "debug": false,
+  "redirect_uri": "http://localhost:4000/oauth/callback"
+}

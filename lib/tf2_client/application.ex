@@ -6,17 +6,75 @@ defmodule TF2Client.Application do
   use Application
   require Logger
 
+  alias TF2Client.Config
+  alias TF2Client.SetupWizard
+
   @impl true
   def start(_type, _args) do
     case TF2Client.CLI.command() do
-      :run -> start_supervisor()
-      :oauth_bootstrap -> start_oauth_bootstrap_command()
+      :run ->
+        maybe_run_setup_wizard()
+        start_supervisor()
+
+      :setup ->
+        start_setup_command()
+
+      :config_show ->
+        start_config_show_command()
+
+      :oauth_bootstrap ->
+        start_oauth_bootstrap_command()
     end
   end
 
+  defp maybe_run_setup_wizard do
+    case Config.load() do
+      {:ok, %Config{} = config} ->
+        case Config.configured?(config) do
+          true ->
+            :ok
+
+          false ->
+            case SetupWizard.interactive?() do
+              true ->
+                case SetupWizard.run(config) do
+                  {:ok, _updated} -> :ok
+                  {:error, _reason} -> :ok
+                end
+
+              false ->
+                :ok
+            end
+        end
+
+      _other ->
+        :ok
+    end
+  end
+
+  defp start_setup_command do
+    pid =
+      spawn_link(fn ->
+        case SetupWizard.run() do
+          {:ok, _config} -> System.halt(0)
+          {:error, _reason} -> System.halt(1)
+        end
+      end)
+
+    {:ok, pid}
+  end
+
+  defp start_config_show_command do
+    pid =
+      spawn_link(fn ->
+        IO.puts(Config.summary())
+        System.halt(0)
+      end)
+
+    {:ok, pid}
+  end
+
   defp start_supervisor do
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: TF2Client.Supervisor]
 
     with {:ok, supervisor} <- Supervisor.start_link([TF2Client.FinchConfig.child_spec()], opts) do
@@ -46,10 +104,10 @@ defmodule TF2Client.Application do
       System.halt(1)
   end
 
-  defp start_runtime_children(supervisor) do
+  def start_runtime_children(supervisor \\ TF2Client.Supervisor) do
     start_child(supervisor, TF2Client.ChatbotState)
 
-    case TF2Client.TwitchConfig.from_env() do
+    case TF2Client.TwitchConfig.load() do
       {:ok, bot_config} ->
         start_child(supervisor, {TF2Client.TwitchSupervisor, bot_config})
         start_child(supervisor, TF2Client.RequestQueue)

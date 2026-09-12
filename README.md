@@ -6,61 +6,95 @@ It connects to Twitch chat via `tmi`, writes request `.lua` files for the game m
 
 ## Setup
 
-### Twitch Developer Application (OAuth)
+### 1. Twitch Developer Application (OAuth)
 
-To use the OAuth bootstrap/refresh flow you need to create a Twitch Developer application:
+To use the OAuth flow you need a Twitch Developer application:
 
 1. Go to `https://dev.twitch.tv/console/apps` and create a new application.
-2. Set the OAuth Redirect URL to `http://localhost:4000/oauth/callback` (must match `TWITCH_REDIRECT_URI`).
-3. After creation, click `Manage`, then copy the `Client ID` and generate/copy the `Client Secret`.
-4. Set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` in your environment.
+2. Set the OAuth Redirect URL to `http://localhost:4000/oauth/callback`.
+3. After creation, click **Manage**, then copy the **Client ID** and generate/copy the **Client Secret**.
 
-If you rotate the client secret or revoke access, delete the stored token file and run the bootstrap again.
+### 2. Configuration
 
-### Environment variables
+TF2Client supports three ways to configure settings (evaluated in order of precedence):
+1. **Environment variables** (highest priority, great for Docker/headless environments)
+2. **`config.json` file** (checked in `./config.json` or `~/.config/tf2_client/config.json`)
+3. **Interactive Setup Wizard** (prompts you on first launch if unconfigured)
+
+#### Quick Setup via Interactive Wizard
+If you start the bot without any prior configuration in a terminal, it will guide you through setting up your channel and credentials:
+
+```bash
+# On Linux / macOS:
+mix tf2.setup
+
+# On Windows executable:
+.\tf2_client_windows.exe setup
+```
+
+#### Configuration File (`config.json`)
+Copy `config.example.json` to `config.json` in the same directory as the executable (or place it at `~/.config/tf2_client/config.json`):
+
+```json
+{
+  "bot_user": "your_bot_username",
+  "channels": ["streamer_channel"],
+  "client_id": "your_client_id",
+  "client_secret": "your_client_secret",
+  "mod_channels": [],
+  "debug": false,
+  "redirect_uri": "http://localhost:4000/oauth/callback"
+}
+```
+
+To inspect your current configuration and token status:
+# On Linux / macOS:
+mix tf2.config
+
+# On Windows executable:
+.\tf2_client_windows.exe config
+
+#### Environment variables (optional overrides)
 
 - `TWITCH_BOT_USER`: bot Twitch username (lowercase recommended)
 - `TWITCH_BOT_OAUTH` (optional): bot OAuth token for IRC (must start with `oauth:`); if unset, uses the stored OAuth tokens
 - `TWITCH_CHANNELS`: comma/space separated list of channels to join (no `#`)
+- `TWITCH_CLIENT_ID`: Twitch OAuth client id (required for OAuth authorization and refresh)
+- `TWITCH_CLIENT_SECRET`: Twitch OAuth client secret (required for OAuth authorization and refresh)
+- `TWITCH_REDIRECT_URI` (optional): OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
 - `TWITCH_MOD_CHANNELS` (optional): channels where the bot is a moderator (rate limits)
 - `TWITCH_DEBUG` (optional): `true`/`false`
+- `TF2_CONFIG_PATH` (optional): custom path to `config.json`
 - `TF2_INTEGRATION_GAME_FILES` (optional): folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files). If unset or empty, the bot uses `~/.tf2`, matching the game mod.
 - `TF2_ENABLE_TWITCH_BOT` (optional): set to `false` to disable starting the bot
 - `TF2_DISABLE_RATE_LIMITS` (optional): set to `true` to disable rate limiting
 - `TF2_REQUEST_QUEUE_DELAYS_MS` (optional): per-request delays (e.g. `TOWN=5000,COMPANY=0,LINE=0,VEHICLE=0`). Requests with `0` delay are sent immediately; delayed types are queued FIFO.
-- `TWITCH_CLIENT_ID`: Twitch OAuth client id (required for OAuth bootstrap/refresh)
-- `TWITCH_CLIENT_SECRET`: Twitch OAuth client secret (required for OAuth bootstrap/refresh)
-- `TWITCH_REDIRECT_URI`: OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
 
-### OAuth bootstrap (one-time)
-
-Run:
-
-`mix twitch.oauth.bootstrap`
-
-For the packaged Burrito executable, run:
-
-`.\tf2_client_windows.exe oauth.bootstrap`
-
-#### Releases
-
-Mix tasks are not available in releases. To bootstrap in a release, run:
-
-`bin/tf2_client eval "TF2Client.Twitch.OAuthBootstrap.bootstrap!()"`
-
-Notes:
-
-- This opens a local browser and listens on `http://localhost:4000/oauth/callback`.
-- Tokens are stored at `~/.config/tf2_client/twitch_tokens.json` by default.
-- For headless servers, run the bootstrap on a machine with a browser and copy the token file to the server user.
-
-### Run
+### 3. Run & Auto-Authorization
 
 Start the game with the mod enabled so it can create/update `gameState.json` in the shared game files folder, then run:
 
-`iex -S mix`
+```bash
+# On Linux / macOS (foreground):
+mix run --no-halt
 
-By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster.
+# Or interactive IEx shell:
+iex -S mix
+
+# On Windows executable:
+.\tf2_client_windows.exe
+```
+
+- **Seamless Auto-Authorization**: If tokens are not present, the bot automatically opens your browser to authorize with Twitch, saves the credentials to `~/.config/tf2_client/twitch_tokens.json`, and connects to chat immediately without requiring a restart!
+- By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster with `!tf2on`.
+
+#### Manual OAuth Bootstrap (Optional)
+If you wish to pre-authorize or re-authorize independently of running the bot:
+```bash
+.\tf2_client_windows.exe oauth.bootstrap
+# or from source:
+mix twitch.oauth.bootstrap
+```
 
 ### Packaged Windows executable
 
@@ -92,19 +126,12 @@ The Windows machine running the executable does not need Elixir or Erlang instal
 
 If Windows shows `VCRUNTIME140.dll was not found`, install the Microsoft Visual C++ Redistributable x64 package from `https://aka.ms/vc14/vc_redist.x64.exe`.
 
-Set the environment variables before starting the bot. In PowerShell:
+#### Available Packaged Commands:
 
-```powershell
-$env:TWITCH_BOT_USER = "your_bot_username"
-$env:TWITCH_CHANNELS = "streamer_channel"
-$env:TWITCH_CLIENT_ID = "your_client_id"
-$env:TWITCH_CLIENT_SECRET = "your_client_secret"
-.\tf2_client_windows.exe
-```
-
-TF2Client packaged commands:
-
-- `.\tf2_client_windows.exe oauth.bootstrap`
+- `.\tf2_client_windows.exe` → start the bot (prompts setup if unconfigured, auto-authorizes if needed)
+- `.\tf2_client_windows.exe setup` → run interactive configuration wizard
+- `.\tf2_client_windows.exe config` → show current configuration and token status
+- `.\tf2_client_windows.exe oauth.bootstrap` → one-time manual OAuth bootstrap
 
 Burrito maintenance commands:
 

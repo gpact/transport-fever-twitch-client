@@ -11,6 +11,18 @@ defmodule TF2Client.CLITest do
     :ok
   end
 
+  test "detects setup command" do
+    System.argv(["setup"])
+
+    assert CLI.command() == :setup
+  end
+
+  test "detects config command" do
+    System.argv(["config"])
+
+    assert CLI.command() == :config_show
+  end
+
   test "detects dotted oauth bootstrap command" do
     System.argv(["oauth.bootstrap"])
 

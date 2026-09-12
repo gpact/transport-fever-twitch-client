@@ -38,7 +38,8 @@ defmodule TF2Client.MixProject do
         steps: [:assemble, &Burrito.wrap/1],
         burrito: [
           targets: [
-            windows: [os: :windows, cpu: :x86_64]
+            windows: [os: :windows, cpu: :x86_64],
+            linux: [os: :linux, cpu: :x86_64]
           ]
         ]
       ]

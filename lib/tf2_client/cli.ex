@@ -3,6 +3,8 @@ defmodule TF2Client.CLI do
 
   def command do
     case argv() do
+      ["setup" | _rest] -> :setup
+      ["config" | _rest] -> :config_show
       ["oauth.bootstrap" | _rest] -> :oauth_bootstrap
       ["oauth", "bootstrap" | _rest] -> :oauth_bootstrap
       _other -> :run
