@@ -1,8 +1,10 @@
 {
   "bot_user": "your_bot_username",
   "channels": ["streamer_channel"],
-  "client_id": "your_twitch_client_id",
-  "client_secret": "your_twitch_client_secret",
+  "_comment": "client_id, client_secret, and bot_oauth are optional! The bot uses built-in Twitch authorization by default.",
+  "client_id": null,
+  "client_secret": null,
+  "bot_oauth": null,
   "mod_channels": [],
   "debug": false,
   "redirect_uri": "http://localhost:4000/oauth/callback"

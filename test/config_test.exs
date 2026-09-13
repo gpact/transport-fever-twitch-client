@@ -149,4 +149,34 @@ defmodule TF2Client.ConfigTest do
     System.put_env("TWITCH_CLIENT_ID", "override_id")
     assert Config.client_id() == "override_id"
   end
+
+  test "client_id falls back to default project client_id when not configured", %{config_file: config_file} do
+    File.write!(config_file, "{}")
+    assert Config.client_id() == "l4my2fg4doyt5rpr0sow94d441jxxl"
+  end
+
+  test "client_secret returns nil and implicit_flow? returns true when not configured", %{config_file: config_file} do
+    File.write!(config_file, "{}")
+    assert Config.client_secret() == nil
+    assert Config.implicit_flow?() == true
+  end
+
+  test "implicit_flow? returns false when client_secret is configured", %{config_file: config_file} do
+    json = """
+    {
+      "client_secret": "my_secret"
+    }
+    """
+
+    File.write!(config_file, json)
+    assert Config.client_secret() == "my_secret"
+    assert Config.implicit_flow?() == false
+  end
+
+  test "summary reflects default client_id and browser login status", %{config_file: config_file} do
+    File.write!(config_file, "{}")
+    summary = Config.summary()
+    assert String.contains?(summary, "project default (l4my2fg4doyt5rpr0sow94d441jxxl)")
+    assert String.contains?(summary, "not set (using browser login)")
+  end
 end

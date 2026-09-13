@@ -59,8 +59,7 @@ defmodule TF2Client.TwitchConfig do
     end
   end
 
-  defp maybe_auto_bootstrap(%Config{client_id: id, client_secret: secret})
-       when is_binary(id) and id != "" and is_binary(secret) and secret != "" do
+  defp maybe_auto_bootstrap(%Config{} = _config) do
     case auto_bootstrap_allowed?() do
       true ->
         IO.puts("""
@@ -82,10 +81,6 @@ defmodule TF2Client.TwitchConfig do
       false ->
         {:error, "missing Twitch OAuth tokens; run oauth.bootstrap"}
     end
-  end
-
-  defp maybe_auto_bootstrap(_config) do
-    {:error, "missing Twitch OAuth tokens; run oauth.bootstrap"}
   end
 
   defp auto_bootstrap_allowed? do

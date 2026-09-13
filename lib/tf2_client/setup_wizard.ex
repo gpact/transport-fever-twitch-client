@@ -35,8 +35,16 @@ defmodule TF2Client.SetupWizard do
     with {:ok, channel} <- prompt_channel(existing_config.channels),
          default_user = existing_config.bot_user || channel,
          {:ok, bot_user} <- prompt_bot_user(default_user),
-         {:ok, client_id} <- prompt_credential("Twitch Client ID", existing_config.client_id),
-         {:ok, client_secret} <- prompt_credential("Twitch Client Secret", existing_config.client_secret),
+         {:ok, client_id} <-
+           prompt_credential(
+             "Twitch Client ID (optional, press Enter to use default)",
+             existing_config.client_id
+           ),
+         {:ok, client_secret} <-
+           prompt_credential(
+             "Twitch Client Secret (optional, press Enter for browser login)",
+             existing_config.client_secret
+           ),
          {:ok, bot_oauth} <-
            prompt_optional(
              "Twitch Bot OAuth IRC token (optional, leave blank to use browser login)",

@@ -1,6 +1,7 @@
 defmodule TF2Client.Config do
   @moduledoc false
 
+  @default_client_id "l4my2fg4doyt5rpr0sow94d441jxxl"
   @default_redirect_uri "http://localhost:4000/oauth/callback"
   @default_config_filename "config.json"
   @app_dir "tf2_client"
@@ -57,7 +58,10 @@ defmodule TF2Client.Config do
     base_config =
       case File.read(path) do
         {:ok, content} ->
-          parse_config_json(content)
+          case String.trim(content) do
+            "" -> %__MODULE__{}
+            trimmed -> parse_config_json(trimmed)
+          end
 
         {:error, :enoent} ->
           %__MODULE__{}
@@ -100,6 +104,8 @@ defmodule TF2Client.Config do
 
   def configured?(_), do: false
 
+  def default_client_id, do: @default_client_id
+
   def client_id do
     case System.get_env("TWITCH_CLIENT_ID") do
       value when is_binary(value) and value != "" ->
@@ -111,7 +117,7 @@ defmodule TF2Client.Config do
             id
 
           _other ->
-            raise "Missing Twitch Client ID. Set it in config.json or TWITCH_CLIENT_ID environment variable."
+            @default_client_id
         end
     end
   end
@@ -127,8 +133,24 @@ defmodule TF2Client.Config do
             secret
 
           _other ->
-            raise "Missing Twitch Client Secret. Set it in config.json or TWITCH_CLIENT_SECRET environment variable."
+            nil
         end
+    end
+  end
+
+  def implicit_flow? do
+    case client_secret() do
+      nil -> true
+      "" -> true
+      _secret -> false
+    end
+  end
+
+  def implicit_flow?(%__MODULE__{client_secret: secret}) do
+    case secret do
+      nil -> true
+      "" -> true
+      _ -> false
     end
   end
 
@@ -149,8 +171,10 @@ defmodule TF2Client.Config do
   end
 
   def summary do
-    {:ok, config} = load()
-    summary(config)
+    case load() do
+      {:ok, config} -> summary(config)
+      {:error, reason} -> "Error loading configuration: #{inspect(reason)}"
+    end
   end
 
   def summary(%__MODULE__{} = config) do
@@ -161,8 +185,8 @@ defmodule TF2Client.Config do
     Config Path:    #{config_path()}
     Bot Username:   #{config.bot_user || "(not set)"}
     Channels:       #{format_list(config.channels)}
-    Client ID:      #{credential_status(config.client_id)}
-    Client Secret:  #{credential_status(config.client_secret)}
+    Client ID:      #{client_id_status(config.client_id)}
+    Client Secret:  #{client_secret_status(config.client_secret)}
     Debug Mode:     #{config.debug}
     Rate Limits:    #{rate_limit_status(config.disable_rate_limits)}
     Bot Enabled:    #{config.enable_bot}
@@ -172,9 +196,14 @@ defmodule TF2Client.Config do
   defp format_list([]), do: "(none)"
   defp format_list(list) when is_list(list), do: Enum.join(list, ", ")
 
-  defp credential_status(nil), do: "(not set)"
-  defp credential_status(""), do: "(not set)"
-  defp credential_status(_), do: "configured"
+  defp client_id_status(nil), do: "project default (#{@default_client_id})"
+  defp client_id_status(""), do: "project default (#{@default_client_id})"
+  defp client_id_status(id) when id == @default_client_id, do: "project default (#{id})"
+  defp client_id_status(_custom), do: "custom configured"
+
+  defp client_secret_status(nil), do: "not set (using browser login)"
+  defp client_secret_status(""), do: "not set (using browser login)"
+  defp client_secret_status(_), do: "configured"
 
   defp rate_limit_status(true), do: "disabled"
   defp rate_limit_status(false), do: "enabled"

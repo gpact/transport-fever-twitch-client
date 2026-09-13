@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transport Fever 2 Twitch Bot - Authorization</title>
+  <style>
+    :root {
+      --bg: #121820;
+      --card-bg: #1e2632;
+      --border: #2e3b4e;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #38bdf8;
+      --success: #34d399;
+      --error: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+    .icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+    p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(56, 189, 248, 0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .token-box {
+      display: none;
+      margin-top: 1.5rem;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: left;
+    }
+    .token-input {
+      width: 100%;
+      padding: 0.5rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: var(--text);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      margin-bottom: 0.75rem;
+    }
+    .btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: 600;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="icon" class="icon">🚂</div>
+    <h1 id="title">Authorizing Bot</h1>
+    <div id="spinner" class="spinner"></div>
+    <p id="status">Connecting with your local Transport Fever 2 bot...</p>
+
+    <div id="token-box" class="token-box">
+      <p style="margin-bottom: 0.5rem; font-size: 0.85rem;">If the bot did not automatically connect, copy your token below:</p>
+      <input id="token-input" class="token-input" readonly type="text" />
+      <button id="copy-btn" class="btn" onclick="copyToken()">📋 Copy Token</button>
+    </div>
+  </div>
+
+  <script>
+    function parseOAuthHash() {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const queryParams = new URLSearchParams(window.location.search);
+
+      return {
+        accessToken: params.get('access_token') || queryParams.get('access_token'),
+        expiresIn: parseInt(params.get('expires_in') || queryParams.get('expires_in') || '5184000', 10),
+        error: params.get('error') || queryParams.get('error'),
+        errorDescription: params.get('error_description') || queryParams.get('error_description')
+      };
+    }
+
+    function showSuccess() {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('icon').textContent = '✅';
+      document.getElementById('title').textContent = 'Authorization Successful!';
+      document.getElementById('status').innerHTML = 'Your Twitch account is now authorized.<br>You may close this tab and return to Transport Fever 2.';
+    }
+
+    function showError(message) {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('icon').textContent = '❌';
+      document.getElementById('title').textContent = 'Authorization Failed';
+      document.getElementById('status').textContent = message || 'Twitch authorization failed. Please try again.';
+    }
+
+    function showManualFallback(token) {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('icon').textContent = '🔑';
+      document.getElementById('title').textContent = 'Authorization Complete';
+      document.getElementById('status').textContent = 'Could not communicate with localhost:4000 directly. Please copy your token:';
+      document.getElementById('token-input').value = token;
+      document.getElementById('token-box').style.display = 'block';
+    }
+
+    function copyToken() {
+      const input = document.getElementById('token-input');
+      input.select();
+      document.execCommand('copy');
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy Token'; }, 2000);
+    }
+
+    (function init() {
+      const { accessToken, expiresIn, error, errorDescription } = parseOAuthHash();
+
+      if (error) {
+        showError(errorDescription || error);
+        return;
+      }
+
+      if (!accessToken) {
+        showError('No authorization token was found in the URL.');
+        return;
+      }
+
+      const targetUrl = 'http://localhost:4000/oauth/token';
+      const payload = { access_token: accessToken, expires_in: expiresIn };
+
+      fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if (response.ok) {
+          showSuccess();
+        } else {
+          window.location.href = 'http://localhost:4000/oauth/callback?access_token=' + encodeURIComponent(accessToken);
+        }
+      })
+      .catch(err => {
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          window.location.href = 'http://localhost:4000/oauth/callback?access_token=' + encodeURIComponent(accessToken);
+        } else {
+          showManualFallback(accessToken);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -6,13 +6,13 @@ It connects to Twitch chat via `tmi`, writes request `.lua` files for the game m
 
 ## Setup
 
-### 1. Twitch Developer Application (OAuth)
+### 1. Zero-Config Twitch Login (Default)
 
-To use the OAuth flow you need a Twitch Developer application:
+The bot comes pre-configured with default credentials for seamless 1-click browser authorization. **You do not need to register a Twitch Developer application.**
 
-1. Go to `https://dev.twitch.tv/console/apps` and create a new application.
-2. Set the OAuth Redirect URL to `http://localhost:4000/oauth/callback`.
-3. After creation, click **Manage**, then copy the **Client ID** and generate/copy the **Client Secret**.
+When running the bot for the first time, simply enter your Twitch channel name. The bot will automatically open your web browser, ask you to log in with Twitch, and connect immediately!
+
+*(Optional for Developers)*: If you prefer to manage your own Twitch application, you can still register one at `https://dev.twitch.tv/console/apps` (set OAuth Redirect URL to `http://localhost:4000/oauth/callback`) and configure your custom `client_id` and `client_secret`.
 
 ### 2. Configuration
 

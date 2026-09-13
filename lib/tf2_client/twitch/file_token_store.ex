@@ -22,10 +22,14 @@ defmodule TF2Client.Twitch.FileTokenStore do
     end
   end
 
+  # 60 days in seconds
+  @default_token_lifespan_seconds div(:timer.hours(60 * 24), 1000)
+
   @impl true
-  def save(%{access_token: access_token, refresh_token: refresh_token, expires_at: expires_at})
-      when is_binary(access_token) and is_binary(refresh_token) and is_integer(expires_at) do
+  def save(%{access_token: access_token} = tokens) when is_binary(access_token) and access_token != "" do
     path = tokens_path()
+    refresh_token = Map.get(tokens, :refresh_token)
+    expires_at = Map.get(tokens, :expires_at) || System.os_time(:second) + @default_token_lifespan_seconds
 
     data = %{
       "access_token" => access_token,
@@ -48,14 +52,18 @@ defmodule TF2Client.Twitch.FileTokenStore do
   defp parse_tokens(json) when is_binary(json) do
     case Jason.decode(json) do
       {:ok, %{} = decoded} ->
-        access_token = decoded |> Map.get("access_token") |> normalize_optional_string()
-        refresh_token = decoded |> Map.get("refresh_token") |> normalize_optional_string()
-        expires_at = normalize_integer(Map.get(decoded, "expires_at"))
+        access_token = normalize_optional_string(Map.get(decoded, "access_token"))
+        refresh_token = normalize_optional_string(Map.get(decoded, "refresh_token"))
 
-        if is_binary(access_token) and is_binary(refresh_token) and is_integer(expires_at) do
-          {:ok, %{access_token: access_token, refresh_token: refresh_token, expires_at: expires_at}}
-        else
-          :error
+        expires_at =
+          normalize_integer(Map.get(decoded, "expires_at")) || System.os_time(:second) + @default_token_lifespan_seconds
+
+        case access_token do
+          token when is_binary(token) and token != "" ->
+            {:ok, %{access_token: token, refresh_token: refresh_token, expires_at: expires_at}}
+
+          _ ->
+            :error
         end
 
       _ ->
@@ -64,7 +72,13 @@ defmodule TF2Client.Twitch.FileTokenStore do
   end
 
   defp tokens_path do
-    Path.join(tokens_dir(), @tokens_filename)
+    case System.get_env("TF2_TOKENS_PATH") do
+      custom when is_binary(custom) and custom != "" ->
+        custom
+
+      _ ->
+        Path.join(tokens_dir(), @tokens_filename)
+    end
   end
 
   defp tokens_dir do

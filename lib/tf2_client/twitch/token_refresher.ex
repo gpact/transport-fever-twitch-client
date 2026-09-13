@@ -35,8 +35,8 @@ defmodule TF2Client.Twitch.TokenRefresher do
     store = TokenStore.default()
 
     case store.load() do
-      {:ok, tokens} ->
-        case refresh_tokens(tokens.refresh_token) do
+      {:ok, %{refresh_token: refresh_token}} when is_binary(refresh_token) and refresh_token != "" ->
+        case refresh_tokens(refresh_token) do
           {:ok, refreshed} ->
             store.save(refreshed)
             {:ok, refreshed}
@@ -46,6 +46,10 @@ defmodule TF2Client.Twitch.TokenRefresher do
             {:error, reason}
         end
 
+      {:ok, _tokens} ->
+        store.delete()
+        {:error, :missing_refresh_token}
+
       :error ->
         {:error, :missing_tokens}
     end
@@ -53,7 +57,7 @@ defmodule TF2Client.Twitch.TokenRefresher do
 
   def exchange_code_for_tokens!(code) when is_binary(code) do
     client_id = Config.client_id()
-    client_secret = Config.client_secret()
+    client_secret = Config.client_secret() || raise "Twitch Client Secret required to exchange authorization code."
     redirect_uri = Config.redirect_uri()
 
     params = %{
@@ -107,15 +111,7 @@ defmodule TF2Client.Twitch.TokenRefresher do
 
     case expires_at - now <= @refresh_margin_seconds do
       true ->
-        case refresh_tokens(tokens.refresh_token) do
-          {:ok, refreshed} ->
-            store.save(refreshed)
-            {:ok, refreshed}
-
-          {:error, reason} ->
-            store.delete()
-            {:error, reason}
-        end
+        attempt_refresh(tokens, store)
 
       false ->
         {:ok, tokens}
@@ -124,9 +120,27 @@ defmodule TF2Client.Twitch.TokenRefresher do
 
   defp refresh_if_needed(tokens, _store), do: {:ok, tokens}
 
+  defp attempt_refresh(%{refresh_token: refresh_token} = _tokens, store)
+       when is_binary(refresh_token) and refresh_token != "" do
+    case refresh_tokens(refresh_token) do
+      {:ok, refreshed} ->
+        store.save(refreshed)
+        {:ok, refreshed}
+
+      {:error, reason} ->
+        store.delete()
+        {:error, reason}
+    end
+  end
+
+  defp attempt_refresh(_tokens, store) do
+    store.delete()
+    {:error, :token_expired}
+  end
+
   defp refresh_tokens(refresh_token) when is_binary(refresh_token) do
     client_id = Config.client_id()
-    client_secret = Config.client_secret()
+    client_secret = Config.client_secret() || ""
 
     params = %{
       client_id: client_id,

@@ -24,12 +24,21 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
     end
   end
 
+  # 60 days in seconds
+  @default_token_lifespan_seconds div(:timer.hours(60 * 24), 1000)
+
   def bootstrap! do
     store = TokenStore.default()
 
     case store.load() do
-      {:ok, %{refresh_token: refresh_token}} when is_binary(refresh_token) and refresh_token != "" ->
-        :already_authorized
+      {:ok, %{access_token: token, expires_at: expires_at}}
+      when is_binary(token) and token != "" and is_integer(expires_at) ->
+        now = System.os_time(:second)
+
+        case expires_at - now > 60 do
+          true -> :already_authorized
+          false -> do_bootstrap!(store)
+        end
 
       _ ->
         do_bootstrap!(store)
@@ -44,8 +53,7 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
       {:ok, _pid} = OAuthCallbackServer.start_link(caller: self())
       open_browser!(authorization_url())
 
-      code = await_code!()
-      tokens = TokenRefresher.exchange_code_for_tokens!(code)
+      tokens = await_credentials!()
       store.save(tokens)
       :ok
     after
@@ -70,25 +78,41 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
     end
   end
 
-  defp await_code! do
+  defp await_credentials! do
     receive do
       {:twitch_oauth_code, code} when is_binary(code) and code != "" ->
-        code
+        TokenRefresher.exchange_code_for_tokens!(code)
+
+      {:twitch_oauth_token, %{access_token: token} = data} when is_binary(token) and token != "" ->
+        expires_in = Map.get(data, :expires_in) || @default_token_lifespan_seconds
+        now = System.os_time(:second)
+
+        %{
+          access_token: token,
+          refresh_token: nil,
+          expires_at: now + expires_in
+        }
     after
       @timeout_ms ->
         raise "OAuth authorization timed out."
     end
   end
 
-  defp authorization_url do
+  def authorization_url do
     client_id = Config.client_id()
     redirect_uri = Config.redirect_uri()
+
+    response_type =
+      case Config.implicit_flow?() do
+        true -> "token"
+        false -> "code"
+      end
 
     query =
       URI.encode_query(%{
         client_id: client_id,
         redirect_uri: redirect_uri,
-        response_type: "code",
+        response_type: response_type,
         scope: @scopes
       })
 

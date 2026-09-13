@@ -47,4 +47,30 @@ defmodule TF2Client.SetupWizardTest do
       File.rm_rf(test_dir)
     end
   end
+
+  test "run/1 successfully saves minimal configuration with only channel name and defaults" do
+    inputs = "my_stream_channel\n\n\n\n\n"
+    {:ok, string_io} = StringIO.open(inputs)
+    previous_leader = Process.group_leader()
+    Process.group_leader(self(), string_io)
+
+    test_dir = Path.join(__DIR__, "../tmp/wizard_test_minimal")
+    File.mkdir_p!(test_dir)
+    test_config_path = Path.join(test_dir, "config.json")
+    System.put_env("TF2_CONFIG_PATH", test_config_path)
+
+    try do
+      assert {:ok, %Config{} = config} = SetupWizard.run(%Config{})
+      assert config.channels == ["my_stream_channel"]
+      assert config.bot_user == "my_stream_channel"
+      assert config.client_id == nil
+      assert config.client_secret == nil
+      assert File.exists?(test_config_path)
+    after
+      Process.group_leader(self(), previous_leader)
+      StringIO.close(string_io)
+      System.delete_env("TF2_CONFIG_PATH")
+      File.rm_rf(test_dir)
+    end
+  end
 end
