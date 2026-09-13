@@ -45,19 +45,47 @@ defmodule TF2Client.Twitch.OAuthBootstrap do
     end
   end
 
+  def open_browser(url) when is_binary(url) do
+    case test_env?() do
+      true -> :ok
+      false -> open_browser!(url)
+    end
+  end
+
+  defp test_env? do
+    case Code.ensure_loaded?(Mix) and function_exported?(Mix, :env, 0) do
+      true -> Mix.env() == :test
+      false -> false
+    end
+  end
+
   defp do_bootstrap!(store) do
     ensure_oauth_apps_started!()
     finch_supervisor = ensure_finch_supervised!()
 
+    server_status =
+      case OAuthCallbackServer.running?() do
+        true ->
+          :ok = OAuthCallbackServer.register_caller(self())
+          :already_running
+
+        false ->
+          {:ok, _pid} = OAuthCallbackServer.start_link(caller: self())
+          :started
+      end
+
     try do
-      {:ok, _pid} = OAuthCallbackServer.start_link(caller: self())
       open_browser!(authorization_url())
 
       tokens = await_credentials!()
       store.save(tokens)
       :ok
     after
-      OAuthCallbackServer.stop()
+      case server_status do
+        :started -> OAuthCallbackServer.stop()
+        :already_running -> :ok
+      end
+
       stop_supervisor(finch_supervisor)
     end
   end

@@ -105,8 +105,43 @@ defmodule TF2Client.Application do
   end
 
   def start_runtime_children(supervisor \\ TF2Client.Supervisor) do
-    start_child(supervisor, TF2Client.ChatbotState)
+    case start_web_server?() do
+      true -> start_child(supervisor, TF2Client.Web.Server)
+      false -> :ok
+    end
 
+    start_child(supervisor, TF2Client.ChatbotState)
+    ensure_twitch_started(supervisor)
+  end
+
+  def ensure_twitch_started(supervisor \\ TF2Client.Supervisor) do
+    case supervisor_alive?(supervisor) do
+      true ->
+        case Process.whereis(TF2Client.TwitchSupervisor) do
+          nil ->
+            start_twitch_stack(supervisor)
+
+          _twitch_pid ->
+            :ok
+        end
+
+      false ->
+        :ok
+    end
+  end
+
+  defp supervisor_alive?(pid) when is_pid(pid), do: Process.alive?(pid)
+
+  defp supervisor_alive?(name) when is_atom(name) do
+    case Process.whereis(name) do
+      nil -> false
+      pid -> Process.alive?(pid)
+    end
+  end
+
+  defp supervisor_alive?(_), do: false
+
+  defp start_twitch_stack(supervisor) do
     case TF2Client.TwitchConfig.load() do
       {:ok, bot_config} ->
         start_child(supervisor, {TF2Client.TwitchSupervisor, bot_config})
@@ -116,11 +151,29 @@ defmodule TF2Client.Application do
         :ok
 
       {:error, reason} ->
-        if log_bot_disabled?() do
-          Logger.warning("Twitch bot disabled: #{reason}")
+        case log_bot_disabled?() do
+          true -> Logger.warning("Twitch bot disabled: #{reason}")
+          false -> :ok
         end
 
-        :ok
+        {:error, reason}
+    end
+  end
+
+  defp start_web_server? do
+    case test_env?() do
+      true ->
+        System.get_env("TF2_ENABLE_TEST_WEB_SERVER") in ["1", "true"]
+
+      false ->
+        System.get_env("TF2_DISABLE_WEB_SERVER") not in ["1", "true"]
+    end
+  end
+
+  defp test_env? do
+    case Code.ensure_loaded?(Mix) and function_exported?(Mix, :env, 0) do
+      true -> Mix.env() == :test
+      false -> false
     end
   end
 

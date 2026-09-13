@@ -88,6 +88,15 @@ iex -S mix
 - **Seamless Auto-Authorization**: If tokens are not present, the bot automatically opens your browser to authorize with Twitch, saves the credentials to `~/.config/tf2_client/twitch_tokens.json`, and connects to chat immediately without requiring a restart!
 - By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster with `!tf2on`.
 
+#### Streamer Control Panel (`http://localhost:4000`)
+
+When the bot runs, it automatically serves a lightweight Streamer Control Panel at `http://localhost:4000`:
+- **Live Status Badges**: Real-time indicators for Twitch Chat connection, Bot Active/Standby state, and Transport Fever 2 game mod heartbeat (`gameState.json`).
+- **One-Click Bot Toggle**: Turn the bot active (`!tf2on`) or standby (`!tf2off`).
+- **Purchases Toggle**: Pause or resume in-game company claims, lines, towns, and vehicle purchases (`!pause all` / `!resume all`).
+- **1-Click Twitch Re-authorization**: Launch browser OAuth login to refresh credentials or switch accounts on the fly without restarting.
+- **OBS Studio Friendly**: Add `http://localhost:4000` as a Custom Browser Dock in OBS Studio for quick management while streaming.
+
 #### Manual OAuth Bootstrap (Optional)
 If you wish to pre-authorize or re-authorize independently of running the bot:
 ```bash

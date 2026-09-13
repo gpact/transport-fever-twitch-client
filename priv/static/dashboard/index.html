@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transport Fever 2 - Streamer Control Panel</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-hover: #243247;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --success: #34d399;
+      --success-bg: rgba(52, 211, 153, 0.12);
+      --warning: #fbbf24;
+      --warning-bg: rgba(251, 191, 36, 0.12);
+      --error: #f87171;
+      --error-bg: rgba(248, 113, 113, 0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .header-title .logo {
+      font-size: 2rem;
+    }
+    .header-title h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .header-title p {
+      font-size: 0.825rem;
+      color: var(--text-muted);
+    }
+    .connection-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .pulse-dot.disconnected {
+      background: var(--error);
+      box-shadow: 0 0 8px var(--error);
+    }
+
+    /* Status Grid */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.2s;
+    }
+    .card:hover {
+      border-color: #475569;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card-icon {
+      font-size: 1.4rem;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-success {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+    .badge-warning {
+      background: var(--warning-bg);
+      color: var(--warning);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+    .badge-error {
+      background: var(--error-bg);
+      color: var(--error);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+    }
+    .badge-muted {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-muted);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .card-body {
+      margin-bottom: 0.5rem;
+    }
+    .card-primary-text {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+    .card-subtext {
+      font-size: 0.825rem;
+      color: var(--text-muted);
+      word-break: break-word;
+    }
+
+    /* Actions Section */
+    .actions-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .actions-section h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .action-card {
+      background: #151e2e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .action-header {
+      margin-bottom: 0.75rem;
+    }
+    .action-header h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .action-header p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .btn {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #0f172a;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+    .btn-warning {
+      background: var(--warning);
+      color: #0f172a;
+    }
+    .btn-warning:hover:not(:disabled) {
+      background: #f59e0b;
+    }
+    .btn-danger {
+      background: var(--error);
+      color: #0f172a;
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: #ef4444;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover:not(:disabled) {
+      background: #243247;
+      border-color: #475569;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--card-bg);
+      border: 1px solid var(--accent);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      border-radius: 8px;
+      padding: 0.85rem 1.25rem;
+      font-size: 0.9rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transform: translateY(120%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+    }
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: auto;
+      padding: 1rem 0;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-title">
+        <span class="logo">🚂</span>
+        <div>
+          <h1>Transport Fever 2</h1>
+          <p>Streamer Control Panel</p>
+        </div>
+      </div>
+      <div class="connection-pill">
+        <div id="conn-dot" class="pulse-dot"></div>
+        <span id="conn-status">Connecting to Bot...</span>
+      </div>
+    </header>
+
+    <!-- Status Cards -->
+    <div class="status-grid">
+      <!-- Twitch Chat -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">💬</span>
+            <span class="card-title">Twitch Chat</span>
+          </div>
+          <span id="twitch-badge" class="badge badge-muted">Checking...</span>
+        </div>
+        <div class="card-body">
+          <div id="twitch-channel" class="card-primary-text">#—</div>
+          <div id="twitch-subtext" class="card-subtext">Waiting for connection...</div>
+        </div>
+      </div>
+
+      <!-- Bot State -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">🤖</span>
+            <span class="card-title">Bot State</span>
+          </div>
+          <span id="bot-badge" class="badge badge-muted">Checking...</span>
+        </div>
+        <div class="card-body">
+          <div id="bot-primary-state" class="card-primary-text">—</div>
+          <div id="bot-subtext" class="card-subtext">Checking chatbot state...</div>
+        </div>
+      </div>
+
+      <!-- Game Mod Link -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">🎮</span>
+            <span class="card-title">Transport Fever 2</span>
+          </div>
+          <span id="game-badge" class="badge badge-muted">Checking...</span>
+        </div>
+        <div class="card-body">
+          <div id="game-primary-state" class="card-primary-text">—</div>
+          <div id="game-subtext" class="card-subtext">Checking gameState.json...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Section -->
+    <div class="actions-section">
+      <h2>⚡ Quick Controls</h2>
+      <div class="actions-grid">
+        <!-- Bot Toggle -->
+        <div class="action-card">
+          <div class="action-header">
+            <h3>Bot Response</h3>
+            <p>Toggle whether the bot listens to and responds to Twitch chat commands.</p>
+          </div>
+          <button id="btn-toggle-bot" class="btn btn-outline" onclick="toggleBot()">
+            <span>Loading...</span>
+          </button>
+        </div>
+
+        <!-- Purchases Toggle -->
+        <div class="action-card">
+          <div class="action-header">
+            <h3>Purchases & Redemptions</h3>
+            <p>Pause or resume in-game company claims, lines, towns, and vehicle purchases.</p>
+          </div>
+          <button id="btn-toggle-purchases" class="btn btn-outline" onclick="togglePurchases()">
+            <span>Loading...</span>
+          </button>
+        </div>
+
+        <!-- Twitch Re-authorization -->
+        <div class="action-card">
+          <div class="action-header">
+            <h3>Twitch Authorization</h3>
+            <p>Re-authorize with Twitch or switch accounts with a 1-click browser login.</p>
+          </div>
+          <button id="btn-reauth" class="btn btn-primary" onclick="reauthTwitch()">
+            <span>🔑 Re-authorize Twitch</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Transport Fever 2 Twitch Integration &bull; Running on <code>localhost:4000</code> &bull; OBS Browser Dock compatible
+    </footer>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    let currentData = null;
+    let pollTimer = null;
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch("/api/status");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        currentData = data;
+        updateUI(data);
+        setConnectionState(true);
+      } catch (err) {
+        setConnectionState(false);
+      }
+    }
+
+    function setConnectionState(connected) {
+      const dot = document.getElementById("conn-dot");
+      const text = document.getElementById("conn-status");
+      if (connected) {
+        dot.className = "pulse-dot";
+        text.textContent = "Connected to Bot";
+      } else {
+        dot.className = "pulse-dot disconnected";
+        text.textContent = "Reconnecting...";
+      }
+    }
+
+    function formatRelativeTime(seconds) {
+      if (seconds === null || seconds === undefined || isNaN(seconds)) {
+        return "recently";
+      }
+
+      const sec = Math.max(0, Math.floor(seconds));
+
+      if (sec < 5) {
+        return "just now";
+      }
+
+      if (sec < 60) {
+        return sec + " seconds ago";
+      }
+
+      const minutes = Math.floor(sec / 60);
+      if (minutes < 60) {
+        return minutes === 1 ? "1 minute ago" : minutes + " minutes ago";
+      }
+
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) {
+        return hours === 1 ? "1 hour ago" : hours + " hours ago";
+      }
+
+      const days = Math.floor(hours / 24);
+      if (days < 30) {
+        return days === 1 ? "1 day ago" : days + " days ago";
+      }
+
+      const months = Math.floor(days / 30);
+      if (months < 12) {
+        return months === 1 ? "1 month ago" : months + " months ago";
+      }
+
+      const years = Math.floor(days / 365);
+      return years === 1 ? "1 year ago" : years + " years ago";
+    }
+
+    function updateUI(data) {
+      // 1. Twitch Chat
+      const twitchBadge = document.getElementById("twitch-badge");
+      const twitchChannel = document.getElementById("twitch-channel");
+      const twitchSubtext = document.getElementById("twitch-subtext");
+
+      const channelName = data.channel ? "#" + data.channel : "#—";
+      twitchChannel.textContent = channelName;
+
+      if (data.twitch && data.twitch.connected) {
+        twitchBadge.className = "badge badge-success";
+        twitchBadge.textContent = "Connected";
+        twitchSubtext.textContent = "Bot user @" + (data.bot_user || "unknown") + " listening to chat";
+      } else if (data.twitch && data.twitch.status === "connecting") {
+        twitchBadge.className = "badge badge-warning";
+        twitchBadge.textContent = "Connecting";
+        twitchSubtext.textContent = "Connecting to Twitch chat IRC...";
+      } else {
+        twitchBadge.className = "badge badge-error";
+        twitchBadge.textContent = "Disconnected";
+        twitchSubtext.textContent = "Not connected. Click Re-authorize to connect.";
+      }
+
+      // 2. Bot State
+      const botBadge = document.getElementById("bot-badge");
+      const botPrimary = document.getElementById("bot-primary-state");
+      const botSubtext = document.getElementById("bot-subtext");
+      const btnToggleBot = document.getElementById("btn-toggle-bot");
+
+      if (data.bot && data.bot.enabled) {
+        botBadge.className = "badge badge-success";
+        botBadge.textContent = "Active";
+        botPrimary.textContent = "Active (!tf2on)";
+        botSubtext.textContent = "Responding to chat commands";
+        btnToggleBot.className = "btn btn-warning";
+        btnToggleBot.innerHTML = "<span>⏸️ Turn Standby (!tf2off)</span>";
+      } else {
+        botBadge.className = "badge badge-warning";
+        botBadge.textContent = "Standby";
+        botPrimary.textContent = "Standby (!tf2off)";
+        botSubtext.textContent = "Standby mode: chat commands ignored";
+        btnToggleBot.className = "btn btn-primary";
+        btnToggleBot.innerHTML = "<span>▶️ Turn Active (!tf2on)</span>";
+      }
+
+      // 3. Game Mod Link
+      const gameBadge = document.getElementById("game-badge");
+      const gamePrimary = document.getElementById("game-primary-state");
+      const gameSubtext = document.getElementById("game-subtext");
+
+      if (data.game && data.game.connected) {
+        const ago = formatRelativeTime(data.game.last_updated_seconds_ago);
+        if (data.game.status === "stale") {
+          gameBadge.className = "badge badge-warning";
+          gameBadge.textContent = "Stale";
+          gamePrimary.textContent = "Game Inactive";
+          gameSubtext.textContent = "Last update " + ago + " (game paused?)";
+        } else {
+          gameBadge.className = "badge badge-success";
+          gameBadge.textContent = "Connected";
+          gamePrimary.textContent = "Linked to Game";
+          gameSubtext.textContent = "gameState.json updated " + ago;
+        }
+      } else {
+        gameBadge.className = "badge badge-muted";
+        gameBadge.textContent = "Waiting";
+        gamePrimary.textContent = "Waiting for Game";
+        gameSubtext.textContent = "Load a Transport Fever 2 save with the mod enabled";
+      }
+
+      // 4. Purchases Button
+      const btnTogglePurchases = document.getElementById("btn-toggle-purchases");
+      if (data.purchases && data.purchases.paused) {
+        btnTogglePurchases.className = "btn btn-primary";
+        btnTogglePurchases.innerHTML = "<span>▶️ Allow Purchases</span>";
+      } else {
+        btnTogglePurchases.className = "btn btn-warning";
+        btnTogglePurchases.innerHTML = "<span>⏸️ Pause Purchases</span>";
+      }
+    }
+
+    async function toggleBot() {
+      const btn = document.getElementById("btn-toggle-bot");
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/bot/toggle", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          currentData = data;
+          updateUI(data);
+          showToast(data.bot && data.bot.enabled ? "✅ Bot activated (!tf2on)" : "⏸️ Bot placed on standby (!tf2off)");
+        }
+      } catch (err) {
+        showToast("❌ Failed to toggle bot");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function togglePurchases() {
+      const btn = document.getElementById("btn-toggle-purchases");
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/purchases/toggle", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          currentData = data;
+          updateUI(data);
+          showToast(data.purchases && data.purchases.paused ? "⏸️ Purchases paused" : "✅ Purchases allowed");
+        }
+      } catch (err) {
+        showToast("❌ Failed to toggle purchases");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function reauthTwitch() {
+      const btn = document.getElementById("btn-reauth");
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/oauth/reauth", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            window.open(data.url, "_blank");
+          }
+          showToast("🔑 Twitch authorization launched in browser");
+        }
+      } catch (err) {
+        showToast("❌ Failed to launch authorization");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Initial fetch and start polling every 5 seconds
+    const POLL_INTERVAL_MS = 5000;
+    fetchStatus();
+    pollTimer = setInterval(fetchStatus, POLL_INTERVAL_MS);
+  </script>
+</body>
+</html>
