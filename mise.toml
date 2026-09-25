@@ -1,3 +1,6 @@
+[env]
+_.file = { path = ".env", redact = true }
+
 [tools]
 elixir = "1.19.5-otp-28"
 erlang = "28.5"
