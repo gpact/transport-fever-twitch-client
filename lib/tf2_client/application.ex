@@ -88,6 +88,7 @@ defmodule TF2Client.Application do
     {:ok, pid}
   end
 
+  @dialyzer {:nowarn_function, run_oauth_bootstrap_command: 0}
   defp run_oauth_bootstrap_command do
     case TF2Client.Twitch.OAuthBootstrap.bootstrap!() do
       :ok ->

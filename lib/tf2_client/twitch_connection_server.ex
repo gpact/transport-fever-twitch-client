@@ -100,6 +100,8 @@ defmodule TF2Client.TwitchConnectionServer do
     end
   end
 
+  # ExIRC's spec omits the transport errors returned by its implementation.
+  @dialyzer {:nowarn_function, connect: 1}
   defp connect(%Conn{} = conn) do
     options = TF2Client.TwitchSSLConfig.options(conn.server)
 
@@ -116,12 +118,12 @@ defmodule TF2Client.TwitchConnectionServer do
 
   defp request_capabilities(conn, cap) when cap in @tmi_capabilities do
     Logger.info("[TMI.ConnectionServer] Requesting #{cap} capability...")
-    Client.command(conn, [~c"CAP REQ :twitch.tv/", cap])
+    Client.command(conn, "CAP REQ :twitch.tv/#{cap}")
   end
 
   defp request_capabilities(conn, cap) do
     Logger.warning("[TMI.ConnectionServer] Requesting NON-TMI capability: #{cap}...")
-    Client.command(conn, to_charlist(cap))
+    Client.command(conn, to_string(cap))
   end
 
   defp join_channel(bot, channel) do

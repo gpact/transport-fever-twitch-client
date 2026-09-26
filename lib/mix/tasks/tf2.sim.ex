@@ -45,7 +45,7 @@ defmodule Mix.Tasks.Tf2.Sim do
     line = IO.gets("> ")
 
     case line do
-      nil ->
+      :eof ->
         :ok
 
       line ->

@@ -16,6 +16,10 @@
 # Temporary files, for example, from tests.
 /tmp/
 
+# Dialyzer persistent lookup tables.
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
+
 # If the VM crashes, it generates a dump, let's ignore it too.
 erl_crash.dump
 
