@@ -42,7 +42,7 @@ defmodule TF2Client.Web.Status do
   defp fetch_joined_channels(bot) do
     try do
       channels = TMI.ChannelServer.list_channels(bot)
-      channel_list = MapSet.to_list(channels)
+      channel_list = Enum.to_list(channels)
 
       case channel_list do
         [] ->

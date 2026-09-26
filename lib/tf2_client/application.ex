@@ -53,25 +53,27 @@ defmodule TF2Client.Application do
   end
 
   defp start_setup_command do
-    pid =
-      spawn_link(fn ->
-        case SetupWizard.run() do
-          {:ok, _config} -> System.halt(0)
-          {:error, _reason} -> System.halt(1)
-        end
-      end)
-
+    pid = spawn_link(&run_setup_command/0)
     {:ok, pid}
   end
 
-  defp start_config_show_command do
-    pid =
-      spawn_link(fn ->
-        IO.puts(Config.summary())
-        System.halt(0)
-      end)
+  @dialyzer {:nowarn_function, run_setup_command: 0}
+  defp run_setup_command do
+    case SetupWizard.run() do
+      {:ok, _config} -> System.halt(0)
+      {:error, _reason} -> System.halt(1)
+    end
+  end
 
+  defp start_config_show_command do
+    pid = spawn_link(&run_config_show_command/0)
     {:ok, pid}
+  end
+
+  @dialyzer {:nowarn_function, run_config_show_command: 0}
+  defp run_config_show_command do
+    IO.puts(Config.summary())
+    System.halt(0)
   end
 
   defp start_supervisor do
