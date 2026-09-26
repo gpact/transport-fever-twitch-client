@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  MIX_ENV: prod
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Erlang and Elixir
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: mise.toml
+          version-type: strict
+
+      - name: Verify Tag Matches mix.exs
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          MIX_VERSION=$(mix run -e 'IO.puts(Mix.Project.config()[:version])')
+          echo "Git tag version: $TAG"
+          echo "mix.exs version: $MIX_VERSION"
+          if [ "$TAG" != "$MIX_VERSION" ]; then
+            echo "::error::Tag ($TAG) does not match mix.exs version ($MIX_VERSION)!"
+            exit 1
+          fi
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-prod-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-prod-
+
+      - name: Install dependencies
+        run: |
+          mix deps.get --only prod
+          mix deps.compile
+
+      - name: Build Burrito Releases
+        run: mix release
+
+      - name: Package Archives and Checksums
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          mkdir -p dist
+
+          # Windows
+          cp burrito_out/tf2_client_windows.exe dist/tf_client.exe
+          (cd dist && zip "tf_client-${TAG}-windows-x86_64.zip" tf_client.exe && rm tf_client.exe)
+
+          # Linux
+          cp burrito_out/tf2_client_linux dist/tf_client
+          tar -czf "dist/tf_client-${TAG}-linux-x86_64.tar.gz" -C dist tf_client
+          rm dist/tf_client
+
+          # macOS Intel
+          cp burrito_out/tf2_client_macos dist/tf_client
+          tar -czf "dist/tf_client-${TAG}-darwin-x86_64.tar.gz" -C dist tf_client
+          rm dist/tf_client
+
+          # macOS Apple Silicon
+          cp burrito_out/tf2_client_macos_silicon dist/tf_client
+          tar -czf "dist/tf_client-${TAG}-darwin-aarch64.tar.gz" -C dist tf_client
+          rm dist/tf_client
+
+          # Checksums
+          cd dist
+          sha256sum *.zip *.tar.gz > checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/checksums.txt
+          generate_release_notes: true
