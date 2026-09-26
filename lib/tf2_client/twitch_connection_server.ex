@@ -37,7 +37,7 @@ defmodule TF2Client.TwitchConnectionServer do
 
   @impl GenServer
   def handle_info(:connect, state) do
-    unless Client.is_connected?(state.conn.client) do
+    if not Client.is_connected?(state.conn) do
       connect(state.conn)
     end
 

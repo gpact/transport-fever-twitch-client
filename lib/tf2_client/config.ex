@@ -330,8 +330,6 @@ defmodule TF2Client.Config do
     end
   end
 
-  defp parse_bool_value(_value, default), do: default
-
   defp split_string_list(value) when is_binary(value) do
     String.split(value, [",", " "], trim: true)
     |> Enum.map(&String.trim/1)
