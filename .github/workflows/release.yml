@@ -27,6 +27,17 @@ jobs:
           version-file: mise.toml
           version-type: strict
 
+      - name: Get Zig version from mise.toml
+        id: zig-version
+        run: |
+          ZIG_VERSION=$(sed -nE 's/^[[:space:]]*zig[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)
+          echo "version=$ZIG_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ steps.zig-version.outputs.version }}
+
       - name: Verify Tag Matches mix.exs
         run: |
           TAG="${GITHUB_REF_NAME#v}"
@@ -47,6 +58,14 @@ jobs:
           key: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-prod-${{ hashFiles('mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-prod-
+
+      - name: Cache Burrito ERTS
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/burrito_file_cache
+          key: ${{ runner.os }}-burrito-erts-${{ steps.beam.outputs.otp-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-burrito-erts-${{ steps.beam.outputs.otp-version }}-
 
       - name: Install dependencies
         run: |

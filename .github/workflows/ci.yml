@@ -9,12 +9,12 @@ on:
 permissions:
   contents: read
 
-env:
-  MIX_ENV: test
-
 jobs:
   quality:
+    name: Code Quality and Tests
     runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
 
     steps:
       - name: Checkout repository
@@ -61,3 +61,64 @@ jobs:
 
       - name: Run Dialyzer
         run: mix dialyzer
+
+  release-check:
+    name: Verify Burrito Release
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: prod
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Erlang and Elixir
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: mise.toml
+          version-type: strict
+
+      - name: Get Zig version from mise.toml
+        id: zig-version
+        run: |
+          ZIG_VERSION=$(sed -nE 's/^[[:space:]]*zig[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' mise.toml)
+          echo "version=$ZIG_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ steps.zig-version.outputs.version }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-prod-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-prod-
+
+      - name: Cache Burrito ERTS
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/burrito_file_cache
+          key: ${{ runner.os }}-burrito-erts-${{ steps.beam.outputs.otp-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-burrito-erts-${{ steps.beam.outputs.otp-version }}-
+
+      - name: Install dependencies
+        run: |
+          mix deps.get --only prod
+          mix deps.compile
+
+      - name: Build Burrito Releases
+        run: mix release
+
+      - name: Verify Release Artifacts Exist
+        run: |
+          test -f burrito_out/tf2_client_windows.exe || (echo "Missing Windows build" && exit 1)
+          test -f burrito_out/tf2_client_linux || (echo "Missing Linux build" && exit 1)
+          test -f burrito_out/tf2_client_macos || (echo "Missing macOS Intel build" && exit 1)
+          test -f burrito_out/tf2_client_macos_silicon || (echo "Missing macOS Apple Silicon build" && exit 1)
