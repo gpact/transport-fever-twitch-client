@@ -182,6 +182,7 @@ defmodule TF2Client.SetupWizard do
   end
 
   defp iex_env? do
-    Code.ensure_loaded?(IEx) and function_exported?(IEx, :started?, 0) and IEx.started?()
+    # credo:disable-for-next-line Credo.Check.Refactor.Apply
+    Code.ensure_loaded?(IEx) and function_exported?(IEx, :started?, 0) and apply(IEx, :started?, [])
   end
 end
