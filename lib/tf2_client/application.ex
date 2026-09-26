@@ -166,10 +166,10 @@ defmodule TF2Client.Application do
   defp start_web_server? do
     case test_env?() do
       true ->
-        System.get_env("TF2_ENABLE_TEST_WEB_SERVER") in ["1", "true"]
+        System.get_env("TF_ENABLE_TEST_WEB_SERVER") in ["1", "true"]
 
       false ->
-        System.get_env("TF2_DISABLE_WEB_SERVER") not in ["1", "true"]
+        System.get_env("TF_DISABLE_WEB_SERVER") not in ["1", "true"]
     end
   end
 

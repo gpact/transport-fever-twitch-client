@@ -22,9 +22,14 @@ defmodule TF2Client.Web.RouterTest do
 
     assert conn.status == 200
     assert Conn.get_resp_header(conn, "content-type") == ["text/html; charset=utf-8"]
-    assert String.contains?(conn.resp_body, "Transport Fever 2")
+    assert String.contains?(conn.resp_body, "Transport Fever")
+    refute String.contains?(conn.resp_body, "Transport Fever 2")
     assert String.contains?(conn.resp_body, "Streamer Control Panel")
     assert String.contains?(conn.resp_body, "Quick Controls")
+    assert String.contains?(conn.resp_body, "!tfon")
+    assert String.contains?(conn.resp_body, "!tfoff")
+    refute String.contains?(conn.resp_body, "!tf2on")
+    refute String.contains?(conn.resp_body, "!tf2off")
   end
 
   test "GET /api/status returns JSON status" do

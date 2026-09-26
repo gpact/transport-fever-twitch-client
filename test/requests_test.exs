@@ -5,7 +5,7 @@ defmodule TF2Client.RequestsTest do
   alias TF2Client.Requests
   alias TF2Client.RequestTracker
 
-  @game_files_env "TF2_INTEGRATION_GAME_FILES"
+  @game_files_env "TF_INTEGRATION_GAME_FILES"
 
   setup do
     previous_disable_rate_limits = Application.get_env(:tf2_client, :disable_rate_limits)
@@ -108,6 +108,22 @@ defmodule TF2Client.RequestsTest do
 
     assert {:reply, "@bob !rank is on cooldown for everyone for the next 1 minute."} =
              Requests.handle_chat_command({:profit_rankings}, "bob", "somechannel")
+  end
+
+  test "returns game offline message when game state is missing" do
+    empty_dir = temp_dir()
+    File.mkdir_p!(empty_dir)
+    System.put_env("TF_INTEGRATION_GAME_FILES", empty_dir)
+
+    on_exit(fn ->
+      System.delete_env("TF_INTEGRATION_GAME_FILES")
+      File.rm_rf(empty_dir)
+    end)
+
+    reply = Requests.handle_chat_command({:profit}, "charlie", "somechannel")
+    assert {:reply, msg} = reply
+    assert String.contains?(msg, "Start Transport Fever with the integration enabled")
+    refute String.contains?(msg, "Transport Fever 2")
   end
 
   defp prepare_game_files do

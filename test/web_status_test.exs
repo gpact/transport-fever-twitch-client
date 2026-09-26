@@ -11,12 +11,12 @@ defmodule TF2Client.Web.StatusTest do
 
   setup do
     File.mkdir_p!(@test_dir)
-    System.put_env("TF2_INTEGRATION_GAME_FILES", @test_dir)
+    System.put_env("TF_INTEGRATION_GAME_FILES", @test_dir)
 
     ChatbotState.reset()
 
     on_exit(fn ->
-      System.delete_env("TF2_INTEGRATION_GAME_FILES")
+      System.delete_env("TF_INTEGRATION_GAME_FILES")
       File.rm_rf(@test_dir)
     end)
 

@@ -18,10 +18,10 @@ defmodule TF2Client.Bot do
       :ignore ->
         :ok
 
-      {:ok, {:tf2_on}} ->
+      {:ok, {:tf_on}} ->
         maybe_toggle(chat, sender, tags, :enable)
 
-      {:ok, {:tf2_off}} ->
+      {:ok, {:tf_off}} ->
         maybe_toggle(chat, sender, tags, :disable)
 
       {:ok, {:paused}} ->
@@ -45,7 +45,7 @@ defmodule TF2Client.Bot do
     case broadcaster_or_mod?(sender, chat, tags) do
       true ->
         :ok = ChatbotState.enable(chat)
-        say(chat, "TF2 bot enabled.")
+        say(chat, "Transport Fever bot enabled.")
 
       false ->
         :ok
@@ -56,7 +56,7 @@ defmodule TF2Client.Bot do
     case broadcaster_or_mod?(sender, chat, tags) do
       true ->
         :ok = ChatbotState.disable(chat)
-        say(chat, "TF2 bot disabled.")
+        say(chat, "Transport Fever bot disabled.")
 
       false ->
         :ok

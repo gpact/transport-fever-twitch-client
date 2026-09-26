@@ -4,9 +4,9 @@ defmodule TF2Client.TwitchConfigTest do
   alias TF2Client.Config
   alias TF2Client.TwitchConfig
 
-  test "returns error when TF2_ENABLE_TWITCH_BOT is disabled" do
+  test "returns error when TF_ENABLE_TWITCH_BOT is disabled" do
     config = %Config{enable_bot: false}
-    assert TwitchConfig.from_config(config) == {:error, "TF2_ENABLE_TWITCH_BOT disabled"}
+    assert TwitchConfig.from_config(config) == {:error, "TF_ENABLE_TWITCH_BOT disabled"}
   end
 
   test "returns error when bot username is missing" do

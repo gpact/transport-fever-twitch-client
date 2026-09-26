@@ -168,7 +168,7 @@ defmodule TF2Client.RateLimiter do
   end
 
   defp env_disabled? do
-    case System.get_env("TF2_DISABLE_RATE_LIMITS") do
+    case System.get_env("TF_DISABLE_RATE_LIMITS") do
       nil -> false
       value -> truthy?(value)
     end

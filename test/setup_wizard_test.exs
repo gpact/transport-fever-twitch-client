@@ -31,7 +31,7 @@ defmodule TF2Client.SetupWizardTest do
     test_dir = Path.join(__DIR__, "../tmp/wizard_test")
     File.mkdir_p!(test_dir)
     test_config_path = Path.join(test_dir, "config.json")
-    System.put_env("TF2_CONFIG_PATH", test_config_path)
+    System.put_env("TF_CONFIG_PATH", test_config_path)
 
     try do
       assert {:ok, %Config{} = config} = SetupWizard.run(%Config{})
@@ -43,7 +43,7 @@ defmodule TF2Client.SetupWizardTest do
     after
       Process.group_leader(self(), previous_leader)
       StringIO.close(string_io)
-      System.delete_env("TF2_CONFIG_PATH")
+      System.delete_env("TF_CONFIG_PATH")
       File.rm_rf(test_dir)
     end
   end
@@ -57,7 +57,7 @@ defmodule TF2Client.SetupWizardTest do
     test_dir = Path.join(__DIR__, "../tmp/wizard_test_minimal")
     File.mkdir_p!(test_dir)
     test_config_path = Path.join(test_dir, "config.json")
-    System.put_env("TF2_CONFIG_PATH", test_config_path)
+    System.put_env("TF_CONFIG_PATH", test_config_path)
 
     try do
       assert {:ok, %Config{} = config} = SetupWizard.run(%Config{})
@@ -69,7 +69,7 @@ defmodule TF2Client.SetupWizardTest do
     after
       Process.group_leader(self(), previous_leader)
       StringIO.close(string_io)
-      System.delete_env("TF2_CONFIG_PATH")
+      System.delete_env("TF_CONFIG_PATH")
       File.rm_rf(test_dir)
     end
   end

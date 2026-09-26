@@ -161,7 +161,7 @@ defmodule TF2Client.Requests do
 
       {:error, :game_state_missing} ->
         {:reply,
-         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+         "@#{sender} I can't reach the game right now. Start Transport Fever with the integration enabled and load a save, then try again."}
 
       {:error, :game_state_invalid} ->
         {:reply,
@@ -192,7 +192,7 @@ defmodule TF2Client.Requests do
 
       {:error, :game_state_missing} ->
         {:reply,
-         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+         "@#{sender} I can't reach the game right now. Start Transport Fever with the integration enabled and load a save, then try again."}
 
       {:error, :game_state_invalid} ->
         {:reply,
@@ -219,7 +219,7 @@ defmodule TF2Client.Requests do
 
       {:error, :game_state_missing} ->
         {:reply,
-         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+         "@#{sender} I can't reach the game right now. Start Transport Fever with the integration enabled and load a save, then try again."}
 
       {:error, :game_state_invalid} ->
         {:reply,
@@ -253,7 +253,7 @@ defmodule TF2Client.Requests do
 
       {:error, :game_state_missing} ->
         {:reply,
-         "@#{sender} I can't reach the game right now. Start Transport Fever 2 with the integration enabled and load a save, then try again."}
+         "@#{sender} I can't reach the game right now. Start Transport Fever with the integration enabled and load a save, then try again."}
 
       {:error, :save_uuid_missing} ->
         {:reply,

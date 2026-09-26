@@ -37,8 +37,8 @@ defmodule TF2Client.Commands do
       "!profit",
       "!vehicles",
       "!rank",
-      "!tf2on",
-      "!tf2off",
+      "!tfon",
+      "!tfoff",
       "!paused",
       "!pause <claim|town|townname|line|vehicle|all>",
       "!resume <claim|town|townname|line|vehicle|all>"
@@ -123,11 +123,11 @@ defmodule TF2Client.Commands do
       [value] when value in ["rank", "ranks", "leaderboard", "top"] ->
         {:ok, {:profit_rankings}}
 
-      [value] when value in ["tf2on"] ->
-        {:ok, {:tf2_on}}
+      [value] when value in ["tfon"] ->
+        {:ok, {:tf_on}}
 
-      [value] when value in ["tf2off"] ->
-        {:ok, {:tf2_off}}
+      [value] when value in ["tfoff"] ->
+        {:ok, {:tf_off}}
 
       ["paused"] ->
         {:ok, {:paused}}

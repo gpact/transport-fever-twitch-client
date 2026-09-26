@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transport Fever 2 Twitch Bot - Authorization</title>
+  <title>Transport Fever Twitch Bot - Authorization</title>
   <style>
     :root {
       --bg: #121820;
@@ -106,7 +106,7 @@
     <div id="icon" class="icon">🚂</div>
     <h1 id="title">Authorizing Bot</h1>
     <div id="spinner" class="spinner"></div>
-    <p id="status">Connecting with your local Transport Fever 2 bot...</p>
+    <p id="status">Connecting with your local Transport Fever bot...</p>
 
     <div id="token-box" class="token-box">
       <p style="margin-bottom: 0.5rem; font-size: 0.85rem;">If the bot did not automatically connect, copy your token below:</p>
@@ -133,7 +133,7 @@
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('icon').textContent = '✅';
       document.getElementById('title').textContent = 'Authorization Successful!';
-      document.getElementById('status').innerHTML = 'Your Twitch account is now authorized.<br>You may close this tab and return to Transport Fever 2.';
+      document.getElementById('status').innerHTML = 'Your Twitch account is now authorized.<br>You may close this tab and return to Transport Fever.';
     }
 
     function showError(message) {

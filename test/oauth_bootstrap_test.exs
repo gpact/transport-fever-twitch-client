@@ -9,13 +9,13 @@ defmodule TF2Client.Twitch.OAuthBootstrapTest do
   setup do
     File.mkdir_p!(@test_dir)
     File.write!(@empty_config, "{}")
-    System.put_env("TF2_CONFIG_PATH", @empty_config)
+    System.put_env("TF_CONFIG_PATH", @empty_config)
 
     saved_secret = System.get_env("TWITCH_CLIENT_SECRET")
     System.delete_env("TWITCH_CLIENT_SECRET")
 
     on_exit(fn ->
-      System.delete_env("TF2_CONFIG_PATH")
+      System.delete_env("TF_CONFIG_PATH")
 
       case saved_secret do
         nil -> System.delete_env("TWITCH_CLIENT_SECRET")

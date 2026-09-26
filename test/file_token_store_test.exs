@@ -8,10 +8,10 @@ defmodule TF2Client.Twitch.FileTokenStoreTest do
 
   setup do
     File.mkdir_p!(@test_dir)
-    System.put_env("TF2_TOKENS_PATH", @test_token_file)
+    System.put_env("TF_TOKENS_PATH", @test_token_file)
 
     on_exit(fn ->
-      System.delete_env("TF2_TOKENS_PATH")
+      System.delete_env("TF_TOKENS_PATH")
       File.rm_rf(@test_dir)
     end)
 

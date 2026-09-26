@@ -8,7 +8,7 @@ defmodule TF2Client.ConfigTest do
   setup do
     File.mkdir_p!(@test_config_dir)
     config_file = Path.join(@test_config_dir, "config.json")
-    System.put_env("TF2_CONFIG_PATH", config_file)
+    System.put_env("TF_CONFIG_PATH", config_file)
 
     saved_env = %{
       "TWITCH_BOT_USER" => System.get_env("TWITCH_BOT_USER"),
@@ -16,13 +16,13 @@ defmodule TF2Client.ConfigTest do
       "TWITCH_CLIENT_ID" => System.get_env("TWITCH_CLIENT_ID"),
       "TWITCH_CLIENT_SECRET" => System.get_env("TWITCH_CLIENT_SECRET"),
       "TWITCH_DEBUG" => System.get_env("TWITCH_DEBUG"),
-      "TF2_ENABLE_TWITCH_BOT" => System.get_env("TF2_ENABLE_TWITCH_BOT")
+      "TF_ENABLE_TWITCH_BOT" => System.get_env("TF_ENABLE_TWITCH_BOT")
     }
 
     Enum.each(Map.keys(saved_env), &System.delete_env/1)
 
     on_exit(fn ->
-      System.delete_env("TF2_CONFIG_PATH")
+      System.delete_env("TF_CONFIG_PATH")
 
       Enum.each(saved_env, fn
         {k, nil} -> System.delete_env(k)
@@ -176,7 +176,15 @@ defmodule TF2Client.ConfigTest do
   test "summary reflects default client_id and browser login status", %{config_file: config_file} do
     File.write!(config_file, "{}")
     summary = Config.summary()
+    assert String.contains?(summary, "Transport Fever Twitch Bot - Configuration")
+    refute String.contains?(summary, "Transport Fever 2")
     assert String.contains?(summary, "project default (l4my2fg4doyt5rpr0sow94d441jxxl)")
     assert String.contains?(summary, "not set (using browser login)")
+  end
+
+  test "supports TF_ prefixed env variables" do
+    System.put_env("TF_CONFIG_PATH", "/tmp/custom_tf_config.json")
+    assert Config.config_path() == "/tmp/custom_tf_config.json"
+    System.delete_env("TF_CONFIG_PATH")
   end
 end

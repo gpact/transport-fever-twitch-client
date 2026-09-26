@@ -4,11 +4,11 @@ defmodule TF2Client.GameBridge do
   alias TF2Client.Lua
 
   @schema_version 1
-  @game_files_env "TF2_INTEGRATION_GAME_FILES"
+  @game_files_env "TF_INTEGRATION_GAME_FILES"
   @requests_file "requests.txt"
   @game_state_file "gameState.json"
-  @default_home_folder ".tf2"
-  @default_temp_folder "tf2"
+  @default_home_folder ".transport_fever"
+  @default_temp_folder "transport_fever"
 
   def requests_dir do
     case env_value(@game_files_env) do

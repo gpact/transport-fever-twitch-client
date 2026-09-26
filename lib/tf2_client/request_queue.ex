@@ -139,7 +139,7 @@ defmodule TF2Client.RequestQueue do
   end
 
   defp env_delay_overrides do
-    case System.get_env("TF2_REQUEST_QUEUE_DELAYS_MS") do
+    case System.get_env("TF_REQUEST_QUEUE_DELAYS_MS") do
       nil -> %{}
       "" -> %{}
       value -> parse_delay_overrides(value)

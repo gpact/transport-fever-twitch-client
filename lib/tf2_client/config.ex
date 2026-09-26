@@ -35,7 +35,7 @@ defmodule TF2Client.Config do
         }
 
   def config_path do
-    case System.get_env("TF2_CONFIG_PATH") do
+    case System.get_env("TF_CONFIG_PATH") do
       custom when is_binary(custom) and custom != "" ->
         custom
 
@@ -180,7 +180,7 @@ defmodule TF2Client.Config do
   def summary(%__MODULE__{} = config) do
     """
     ========================================================
-        Transport Fever 2 Twitch Bot - Configuration
+        Transport Fever Twitch Bot - Configuration
     ========================================================
     Config Path:    #{config_path()}
     Bot Username:   #{config.bot_user || "(not set)"}
@@ -228,9 +228,9 @@ defmodule TF2Client.Config do
       client_secret: fetch_string(map, ["client_secret", "twitch_client_secret"]),
       redirect_uri: fetch_string(map, ["redirect_uri", "twitch_redirect_uri"]) || @default_redirect_uri,
       bot_oauth: fetch_string(map, ["bot_oauth", "twitch_bot_oauth"]),
-      game_files_path: fetch_string(map, ["game_files_path", "tf2_integration_game_files"]),
-      disable_rate_limits: fetch_bool(map, ["disable_rate_limits", "tf2_disable_rate_limits"], false),
-      enable_bot: fetch_bool(map, ["enable_bot", "tf2_enable_twitch_bot"], true)
+      game_files_path: fetch_string(map, ["game_files_path", "tf_integration_game_files"]),
+      disable_rate_limits: fetch_bool(map, ["disable_rate_limits", "tf_disable_rate_limits"], false),
+      enable_bot: fetch_bool(map, ["enable_bot", "tf_enable_twitch_bot"], true)
     }
   end
 
@@ -245,13 +245,13 @@ defmodule TF2Client.Config do
         client_secret: env_override("TWITCH_CLIENT_SECRET", config.client_secret),
         redirect_uri: env_override("TWITCH_REDIRECT_URI", config.redirect_uri),
         bot_oauth: env_override("TWITCH_BOT_OAUTH", config.bot_oauth),
-        game_files_path: env_override("TF2_INTEGRATION_GAME_FILES", config.game_files_path),
-        disable_rate_limits: env_override_bool("TF2_DISABLE_RATE_LIMITS", config.disable_rate_limits),
-        enable_bot: env_override_bool("TF2_ENABLE_TWITCH_BOT", config.enable_bot)
+        game_files_path: env_override("TF_INTEGRATION_GAME_FILES", config.game_files_path),
+        disable_rate_limits: env_override_bool("TF_DISABLE_RATE_LIMITS", config.disable_rate_limits),
+        enable_bot: env_override_bool("TF_ENABLE_TWITCH_BOT", config.enable_bot)
     }
   end
 
-  defp env_override(key, default) do
+  defp env_override(key, default) when is_binary(key) do
     case System.get_env(key) do
       nil -> default
       "" -> default
@@ -269,7 +269,7 @@ defmodule TF2Client.Config do
     end
   end
 
-  defp env_override_bool(key, default) do
+  defp env_override_bool(key, default) when is_binary(key) do
     case System.get_env(key) do
       nil -> default
       value -> parse_bool_value(value, default)

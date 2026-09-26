@@ -155,7 +155,7 @@ defmodule TF2Client.Web.Server do
         port
 
       _ ->
-        case System.get_env("TF2_WEB_PORT") do
+        case System.get_env("TF_WEB_PORT") do
           nil ->
             @default_port
 

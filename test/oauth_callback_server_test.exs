@@ -15,7 +15,8 @@ defmodule TF2Client.Twitch.OAuthCallbackServerTest do
 
     assert conn.status == 200
     assert Conn.get_resp_header(conn, "content-type") == ["text/html; charset=utf-8"]
-    assert String.contains?(conn.resp_body, "Transport Fever 2 Twitch Bot")
+    assert String.contains?(conn.resp_body, "Transport Fever Twitch Bot")
+    refute String.contains?(conn.resp_body, "Transport Fever 2")
     assert String.contains?(conn.resp_body, "parseOAuthHash")
   end
 
@@ -32,7 +33,7 @@ defmodule TF2Client.Twitch.OAuthCallbackServerTest do
 
   test "POST /oauth/token and GET /oauth/callback?access_token deliver token to server caller" do
     caller = self()
-    {:ok, _pid} = OAuthCallbackServer.start_link(caller: caller)
+    {:ok, _pid} = OAuthCallbackServer.start_link(caller: caller, port: 4098, ref: {__MODULE__, :test_oauth})
 
     try do
       assert :ok =
@@ -49,7 +50,7 @@ defmodule TF2Client.Twitch.OAuthCallbackServerTest do
 
   test "delivering code delivers code to caller" do
     caller = self()
-    {:ok, _pid} = OAuthCallbackServer.start_link(caller: caller)
+    {:ok, _pid} = OAuthCallbackServer.start_link(caller: caller, port: 4098)
 
     try do
       assert :ok = OAuthCallbackServer.deliver_code("unit_test_code")

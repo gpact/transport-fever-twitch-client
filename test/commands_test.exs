@@ -20,8 +20,14 @@ defmodule TF2Client.CommandsTest do
   end
 
   test "parses enable/disable commands" do
-    assert {:ok, {:tf2_on}} = Commands.parse("!tf2on")
-    assert {:ok, {:tf2_off}} = Commands.parse("!tf2off")
+    assert {:ok, {:tf_on}} = Commands.parse("!tfon")
+    assert {:ok, {:tf_off}} = Commands.parse("!tfoff")
+    assert {:error, "unknown command !tf2on. Try !help"} = Commands.parse("!tf2on")
+    assert {:error, "unknown command !tf2off. Try !help"} = Commands.parse("!tf2off")
+    assert "!tfon" in Commands.examples()
+    assert "!tfoff" in Commands.examples()
+    refute "!tf2on" in Commands.examples()
+    refute "!tf2off" in Commands.examples()
   end
 
   test "parses pause and resume commands" do

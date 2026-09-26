@@ -289,14 +289,14 @@ defmodule Mix.Tasks.Tf2.Sim do
   end
 
   defp ensure_requests_env do
-    case System.get_env("TF2_INTEGRATION_GAME_FILES") do
+    case System.get_env("TF_INTEGRATION_GAME_FILES") do
       value when is_binary(value) and value != "" ->
         :ok
 
       _other ->
         bytes = :crypto.strong_rand_bytes(4)
-        dir = Path.join(System.tmp_dir!(), "tf2-sim-" <> Base.encode16(bytes, case: :lower))
-        System.put_env("TF2_INTEGRATION_GAME_FILES", dir)
+        dir = Path.join(System.tmp_dir!(), "tf-sim-" <> Base.encode16(bytes, case: :lower))
+        System.put_env("TF_INTEGRATION_GAME_FILES", dir)
         :ok
     end
   end

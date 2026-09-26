@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transport Fever 2 - Streamer Control Panel</title>
+  <title>Transport Fever - Streamer Control Panel</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -310,7 +310,7 @@
       <div class="header-title">
         <span class="logo">🚂</span>
         <div>
-          <h1>Transport Fever 2</h1>
+          <h1>Transport Fever</h1>
           <p>Streamer Control Panel</p>
         </div>
       </div>
@@ -357,7 +357,7 @@
         <div class="card-header">
           <div class="card-title-group">
             <span class="card-icon">🎮</span>
-            <span class="card-title">Transport Fever 2</span>
+            <span class="card-title">Transport Fever</span>
           </div>
           <span id="game-badge" class="badge badge-muted">Checking...</span>
         </div>
@@ -408,7 +408,7 @@
     </div>
 
     <footer>
-      Transport Fever 2 Twitch Integration &bull; Running on <code>localhost:4000</code> &bull; OBS Browser Dock compatible
+      Transport Fever Twitch Integration &bull; Running on <code>localhost:4000</code> &bull; OBS Browser Dock compatible
     </footer>
   </div>
 
@@ -521,17 +521,17 @@
       if (data.bot && data.bot.enabled) {
         botBadge.className = "badge badge-success";
         botBadge.textContent = "Active";
-        botPrimary.textContent = "Active (!tf2on)";
+        botPrimary.textContent = "Active (!tfon)";
         botSubtext.textContent = "Responding to chat commands";
         btnToggleBot.className = "btn btn-warning";
-        btnToggleBot.innerHTML = "<span>⏸️ Turn Standby (!tf2off)</span>";
+        btnToggleBot.innerHTML = "<span>⏸️ Turn Standby (!tfoff)</span>";
       } else {
         botBadge.className = "badge badge-warning";
         botBadge.textContent = "Standby";
-        botPrimary.textContent = "Standby (!tf2off)";
+        botPrimary.textContent = "Standby (!tfoff)";
         botSubtext.textContent = "Standby mode: chat commands ignored";
         btnToggleBot.className = "btn btn-primary";
-        btnToggleBot.innerHTML = "<span>▶️ Turn Active (!tf2on)</span>";
+        btnToggleBot.innerHTML = "<span>▶️ Turn Active (!tfon)</span>";
       }
 
       // 3. Game Mod Link
@@ -556,7 +556,7 @@
         gameBadge.className = "badge badge-muted";
         gameBadge.textContent = "Waiting";
         gamePrimary.textContent = "Waiting for Game";
-        gameSubtext.textContent = "Load a Transport Fever 2 save with the mod enabled";
+        gameSubtext.textContent = "Load a Transport Fever save with the mod enabled";
       }
 
       // 4. Purchases Button
@@ -579,7 +579,7 @@
           const data = await res.json();
           currentData = data;
           updateUI(data);
-          showToast(data.bot && data.bot.enabled ? "✅ Bot activated (!tf2on)" : "⏸️ Bot placed on standby (!tf2off)");
+          showToast(data.bot && data.bot.enabled ? "✅ Bot activated (!tfon)" : "⏸️ Bot placed on standby (!tfoff)");
         }
       } catch (err) {
         showToast("❌ Failed to toggle bot");

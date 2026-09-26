@@ -20,7 +20,7 @@ defmodule TF2Client.TwitchConfig do
   end
 
   def from_config(%Config{enable_bot: false}) do
-    {:error, "TF2_ENABLE_TWITCH_BOT disabled"}
+    {:error, "TF_ENABLE_TWITCH_BOT disabled"}
   end
 
   def from_config(%Config{} = config) do
@@ -89,7 +89,7 @@ defmodule TF2Client.TwitchConfig do
         false
 
       false ->
-        System.get_env("TF2_DISABLE_AUTO_AUTH") not in ["1", "true", "TRUE"]
+        System.get_env("TF_DISABLE_AUTO_AUTH") not in ["1", "true", "TRUE"]
     end
   end
 

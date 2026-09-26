@@ -72,7 +72,7 @@ defmodule TF2Client.Twitch.FileTokenStore do
   end
 
   defp tokens_path do
-    case System.get_env("TF2_TOKENS_PATH") do
+    case System.get_env("TF_TOKENS_PATH") do
       custom when is_binary(custom) and custom != "" ->
         custom
 

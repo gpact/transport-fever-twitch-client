@@ -3,7 +3,7 @@ defmodule TF2Client.GameBridgeTest do
 
   alias TF2Client.GameBridge
 
-  @game_files_env "TF2_INTEGRATION_GAME_FILES"
+  @game_files_env "TF_INTEGRATION_GAME_FILES"
   @path_envs [
     @game_files_env,
     "HOME",
@@ -30,11 +30,11 @@ defmodule TF2Client.GameBridgeTest do
     assert GameBridge.requests_dir() == dir
   end
 
-  test "uses home .tf2 directory when configured game files directory is empty" do
+  test "uses home .transport_fever directory when configured game files directory is empty" do
     home_dir = put_home_dir()
     System.put_env(@game_files_env, "")
 
-    expected = Path.join(home_dir, ".tf2")
+    expected = Path.join(home_dir, ".transport_fever")
 
     assert GameBridge.requests_dir() == expected
   end
@@ -43,22 +43,22 @@ defmodule TF2Client.GameBridgeTest do
     home_dir = put_home_dir()
     System.delete_env(@game_files_env)
 
-    expected = Path.join(home_dir, ".tf2")
+    expected = Path.join(home_dir, ".transport_fever")
 
     assert {:error, :game_state_missing} = GameBridge.read_save_uuid()
     assert File.dir?(expected)
   end
 
   test "uses temp fallback when game files and home directories are missing" do
-    temp_dir = temp_dir("tf2-temp")
+    temp_dir = temp_dir("tf-temp")
     System.put_env(@game_files_env, "")
     delete_home_env()
     System.put_env("TMPDIR", "")
     System.put_env("TEMP", temp_dir)
-    System.put_env("TMP", temp_dir("tf2-ignored-tmp"))
-    System.put_env("tmp", temp_dir("tf2-ignored-lower-tmp"))
+    System.put_env("TMP", temp_dir("tf-ignored-tmp"))
+    System.put_env("tmp", temp_dir("tf-ignored-lower-tmp"))
 
-    assert GameBridge.requests_dir() == Path.join(temp_dir, "tf2")
+    assert GameBridge.requests_dir() == Path.join(temp_dir, "transport_fever")
   end
 
   test "writes lua order file and appends to requests.txt" do

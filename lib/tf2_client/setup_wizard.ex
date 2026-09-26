@@ -27,7 +27,7 @@ defmodule TF2Client.SetupWizard do
   def run(%Config{} = existing_config) do
     IO.puts("""
     ========================================================
-        Transport Fever 2 Twitch Bot - Setup Wizard
+        Transport Fever Twitch Bot - Setup Wizard
     ========================================================
     Configure your bot settings. Press Enter to keep current values.
     """)

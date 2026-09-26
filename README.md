@@ -1,6 +1,6 @@
 # TF2Client
 
-Twitch chatbot for a Transport Fever 2 Twitch integration mod.
+Twitch chatbot for a Transport Fever Twitch integration mod.
 
 It connects to Twitch chat via `tmi`, writes request `.lua` files for the game mod to process, and polls `*.json` response files to reply in chat.
 
@@ -64,11 +64,11 @@ mix tf2.config
 - `TWITCH_REDIRECT_URI` (optional): OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
 - `TWITCH_MOD_CHANNELS` (optional): channels where the bot is a moderator (rate limits)
 - `TWITCH_DEBUG` (optional): `true`/`false`
-- `TF2_CONFIG_PATH` (optional): custom path to `config.json`
-- `TF2_INTEGRATION_GAME_FILES` (optional): folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files). If unset or empty, the bot uses `~/.tf2`, matching the game mod.
-- `TF2_ENABLE_TWITCH_BOT` (optional): set to `false` to disable starting the bot
-- `TF2_DISABLE_RATE_LIMITS` (optional): set to `true` to disable rate limiting
-- `TF2_REQUEST_QUEUE_DELAYS_MS` (optional): per-request delays (e.g. `TOWN=5000,COMPANY=0,LINE=0,VEHICLE=0`). Requests with `0` delay are sent immediately; delayed types are queued FIFO.
+- `TF_CONFIG_PATH`: custom path to `config.json`
+- `TF_INTEGRATION_GAME_FILES`: folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files). If unset or empty, the bot uses `~/.transport_fever`, matching the game mod.
+- `TF_ENABLE_TWITCH_BOT`: set to `false` to disable starting the bot
+- `TF_DISABLE_RATE_LIMITS`: set to `true` to disable rate limiting
+- `TF_REQUEST_QUEUE_DELAYS_MS` (optional): per-request delays (e.g. `TOWN=5000,COMPANY=0,LINE=0,VEHICLE=0`). Requests with `0` delay are sent immediately; delayed types are queued FIFO.
 
 ### 3. Run & Auto-Authorization
 
@@ -86,13 +86,13 @@ iex -S mix
 ```
 
 - **Seamless Auto-Authorization**: If tokens are not present, the bot automatically opens your browser to authorize with Twitch, saves the credentials to `~/.config/tf2_client/twitch_tokens.json`, and connects to chat immediately without requiring a restart!
-- By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster with `!tf2on`.
+- By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster with `!tfon`.
 
 #### Streamer Control Panel (`http://localhost:4000`)
 
 When the bot runs, it automatically serves a lightweight Streamer Control Panel at `http://localhost:4000`:
-- **Live Status Badges**: Real-time indicators for Twitch Chat connection, Bot Active/Standby state, and Transport Fever 2 game mod heartbeat (`gameState.json`).
-- **One-Click Bot Toggle**: Turn the bot active (`!tf2on`) or standby (`!tf2off`).
+- **Live Status Badges**: Real-time indicators for Twitch Chat connection, Bot Active/Standby state, and Transport Fever game mod heartbeat (`gameState.json`).
+- **One-Click Bot Toggle**: Turn the bot active (`!tfon`) or standby (`!tfoff`).
 - **Purchases Toggle**: Pause or resume in-game company claims, lines, towns, and vehicle purchases (`!pause all` / `!resume all`).
 - **1-Click Twitch Re-authorization**: Launch browser OAuth login to refresh credentials or switch accounts on the fly without restarting.
 - **OBS Studio Friendly**: Add `http://localhost:4000` as a Custom Browser Dock in OBS Studio for quick management while streaming.
@@ -149,8 +149,8 @@ Burrito maintenance commands:
 
 ## Chat commands
 
-- `!tf2on` → enable the bot in chat (mods/broadcaster only)
-- `!tf2off` → disable the bot in chat (mods/broadcaster only)
+- `!tfon` → enable the bot in chat (mods/broadcaster only)
+- `!tfoff` → disable the bot in chat (mods/broadcaster only)
 - `!pause <claim|town|line|vehicle|all>` → pause a redemption type (mods/broadcaster only)
 - `!resume <claim|town|line|vehicle|all>` → resume a redemption type (mods/broadcaster only)
 - `!paused` → list paused redemption types (mods/broadcaster only)
@@ -173,11 +173,11 @@ Run an interactive shell that simulates chat messages and prints bot replies:
 
 `mix tf2.sim`
 
-If `TF2_INTEGRATION_GAME_FILES` is unset or empty, it uses a fresh temp folder and prints the path on start.
+If `TF_INTEGRATION_GAME_FILES` is unset or empty, it uses a fresh temp folder and prints the path on start.
 Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a script of chat lines, `:delay <ms>` to pause before the next command, and `:ratelimit off` to disable rate limiting.
 
 ## File protocol (with the game mod)
 
-- Shared folder: `TF2_INTEGRATION_GAME_FILES` when set and non-empty, otherwise `~/.tf2`; if no home folder is available, `<temp>/tf2`.
+- Shared folder: `TF_INTEGRATION_GAME_FILES` when set and non-empty, otherwise `~/.transport_fever`; if no home folder is available, `<temp>/transport_fever`.
 - Bot writes: `#{order_id}.lua` (Lua `return` table with `schema_version = 1`) and appends `order_id` to `requests.txt`.
 - Mod writes: `#{order_id}.json` responses; the bot reads, replies in chat, then deletes the response file (and the request `.lua` on completion).
