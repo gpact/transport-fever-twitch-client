@@ -28,7 +28,7 @@ defmodule TF2Client.MixProject do
       {:plug_cowboy, "~> 2.7"},
       {:finch, "~> 0.18"},
       {:castore, "~> 1.0"},
-      {:burrito, "~> 1.0", runtime: false}
+      {:burrito, "~> 1.1"}
     ]
   end
 
@@ -39,7 +39,9 @@ defmodule TF2Client.MixProject do
         burrito: [
           targets: [
             windows: [os: :windows, cpu: :x86_64],
-            linux: [os: :linux, cpu: :x86_64]
+            linux: [os: :linux, cpu: :x86_64],
+            macos: [os: :darwin, cpu: :x86_64],
+            macos_silicon: [os: :darwin, cpu: :aarch64]
           ]
         ]
       ]
