@@ -34,7 +34,7 @@ defmodule TF2Client.MixProject do
       {:plug_cowboy, "~> 2.7"},
       {:finch, "~> 0.18"},
       {:castore, "~> 1.0"},
-      {:burrito, "~> 1.1"},
+      {:burrito, "~> 1.5.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]

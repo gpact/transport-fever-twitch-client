@@ -4,4 +4,4 @@ _.file = { path = ".env", redact = true }
 [tools]
 elixir = "1.20.4-otp-29"
 erlang = "29.1"
-zig = "0.16.0"
+zig = "0.15.2"
