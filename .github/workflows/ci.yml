@@ -114,7 +114,7 @@ jobs:
           mix deps.compile
 
       - name: Build Burrito Releases
-        run: mix release
+        run: mix release --overwrite
 
       - name: Verify Release Artifacts Exist
         run: |

@@ -73,7 +73,7 @@ jobs:
           mix deps.compile
 
       - name: Build Burrito Releases
-        run: mix release
+        run: mix release --overwrite
 
       - name: Package Archives and Checksums
         run: |
