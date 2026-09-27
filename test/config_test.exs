@@ -187,4 +187,10 @@ defmodule TF2Client.ConfigTest do
     assert Config.config_path() == "/tmp/custom_tf_config.json"
     System.delete_env("TF_CONFIG_PATH")
   end
+
+  test "default_config_path uses transport_fever in .config" do
+    expected = Path.join([System.user_home!(), ".config", "transport_fever", "config.json"])
+    assert Config.default_config_path() == expected
+    refute String.contains?(Config.default_config_path(), "tf2_client")
+  end
 end

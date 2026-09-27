@@ -4,7 +4,7 @@ defmodule TF2Client.Twitch.FileTokenStore do
   @behaviour TF2Client.Twitch.TokenStore
 
   @tokens_filename "twitch_tokens.json"
-  @app_dir "tf2_client"
+  @app_dir "transport_fever"
 
   @impl true
   def load do

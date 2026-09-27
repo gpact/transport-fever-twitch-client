@@ -4,7 +4,7 @@ defmodule TF2Client.Config do
   @default_client_id "l4my2fg4doyt5rpr0sow94d441jxxl"
   @default_redirect_uri "http://localhost:4000/oauth/callback"
   @default_config_filename "config.json"
-  @app_dir "tf2_client"
+  @app_dir "transport_fever"
 
   defstruct [
     :bot_user,

@@ -18,7 +18,7 @@ When running the bot for the first time, simply enter your Twitch channel name. 
 
 TF2Client supports three ways to configure settings (evaluated in order of precedence):
 1. **Environment variables** (highest priority, great for Docker/headless environments)
-2. **`config.json` file** (checked in `./config.json` or `~/.config/tf2_client/config.json`)
+2. **`config.json` file** (checked in `./config.json` or `~/.config/transport_fever/config.json`)
 3. **Interactive Setup Wizard** (prompts you on first launch if unconfigured)
 
 #### Quick Setup via Interactive Wizard
@@ -33,7 +33,7 @@ mix tf2.setup
 ```
 
 #### Configuration File (`config.json`)
-Copy `config.example.json` to `config.json` in the same directory as the executable (or place it at `~/.config/tf2_client/config.json`):
+Copy `config.example.json` to `config.json` in the same directory as the executable (or place it at `~/.config/transport_fever/config.json`):
 
 ```json
 {
@@ -85,7 +85,7 @@ iex -S mix
 .\tf2_client_windows.exe
 ```
 
-- **Seamless Auto-Authorization**: If tokens are not present, the bot automatically opens your browser to authorize with Twitch, saves the credentials to `~/.config/tf2_client/twitch_tokens.json`, and connects to chat immediately without requiring a restart!
+- **Seamless Auto-Authorization**: If tokens are not present, the bot automatically opens your browser to authorize with Twitch, saves the credentials to `~/.config/transport_fever/twitch_tokens.json`, and connects to chat immediately without requiring a restart!
 - By default the bot joins the configured channels but does not send any chat messages until enabled by a moderator/broadcaster with `!tfon`.
 
 #### Streamer Control Panel (`http://localhost:4000`)
