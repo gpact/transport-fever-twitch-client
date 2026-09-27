@@ -168,8 +168,8 @@ defmodule TF2Client.Commands do
       ["vehicle", rest] ->
         parse_carrier_cargo(:vehicle, rest)
 
-      [unknown | _] ->
-        {:error, "unknown command #{@command_flag}#{unknown}. Try !help"}
+      _ ->
+        :ignore
     end
   end
 

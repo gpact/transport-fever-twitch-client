@@ -22,12 +22,19 @@ defmodule TF2Client.CommandsTest do
   test "parses enable/disable commands" do
     assert {:ok, {:tf_on}} = Commands.parse("!tfon")
     assert {:ok, {:tf_off}} = Commands.parse("!tfoff")
-    assert {:error, "unknown command !tf2on. Try !help"} = Commands.parse("!tf2on")
-    assert {:error, "unknown command !tf2off. Try !help"} = Commands.parse("!tf2off")
+    assert :ignore = Commands.parse("!tf2on")
+    assert :ignore = Commands.parse("!tf2off")
     assert "!tfon" in Commands.examples()
     assert "!tfoff" in Commands.examples()
     refute "!tf2on" in Commands.examples()
     refute "!tf2off" in Commands.examples()
+  end
+
+  test "ignores unknown commands" do
+    assert :ignore = Commands.parse("!")
+    assert :ignore = Commands.parse("!unknown")
+    assert :ignore = Commands.parse("!otherbot arg")
+    assert :ignore = Commands.parse("!songrequest https://example.com")
   end
 
   test "parses pause and resume commands" do
