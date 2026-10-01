@@ -126,6 +126,50 @@ defmodule TF2Client.RequestsTest do
     refute String.contains?(msg, "Transport Fever 2")
   end
 
+  test "sends SET_TOWN_CREATION_ENABLED request when enabling town creation" do
+    dir = prepare_game_files()
+    ensure_request_tracker_started()
+
+    assert {:reply, "@admin got it! I'll try to enable town creation."} =
+             Requests.handle_chat_command({:set_town_creation_enabled, true}, "admin", "channel")
+
+    lua = read_submitted_lua(dir)
+
+    assert String.contains?(lua, "schema_version = 1")
+    assert String.contains?(lua, ~s(request_type = "SET_TOWN_CREATION_ENABLED"))
+    assert String.contains?(lua, ~s(type = "SET_TOWN_CREATION_ENABLED"))
+    assert String.contains?(lua, ~s(username = "admin"))
+    assert String.contains?(lua, ~s(save_uuid = "save-123"))
+    assert String.contains?(lua, "timestamp = ")
+    assert String.contains?(lua, "enabled = true")
+    refute String.contains?(lua, ~s(enabled = "true"))
+    refute String.contains?(lua, ~s(enabled = "on"))
+    refute String.contains?(lua, "townCreationEnabled")
+    refute String.contains?(lua, "town_creation_enabled")
+  end
+
+  test "sends SET_TOWN_CREATION_ENABLED request when disabling town creation" do
+    dir = prepare_game_files()
+    ensure_request_tracker_started()
+
+    assert {:reply, "@admin got it! I'll try to disable town creation."} =
+             Requests.handle_chat_command({:set_town_creation_enabled, false}, "admin", "channel")
+
+    lua = read_submitted_lua(dir)
+
+    assert String.contains?(lua, "schema_version = 1")
+    assert String.contains?(lua, ~s(request_type = "SET_TOWN_CREATION_ENABLED"))
+    assert String.contains?(lua, ~s(type = "SET_TOWN_CREATION_ENABLED"))
+    assert String.contains?(lua, ~s(username = "admin"))
+    assert String.contains?(lua, ~s(save_uuid = "save-123"))
+    assert String.contains?(lua, "timestamp = ")
+    assert String.contains?(lua, "enabled = false")
+    refute String.contains?(lua, ~s(enabled = "false"))
+    refute String.contains?(lua, ~s(enabled = "off"))
+    refute String.contains?(lua, "townCreationEnabled")
+    refute String.contains?(lua, "town_creation_enabled")
+  end
+
   defp prepare_game_files do
     dir = temp_dir()
     File.mkdir_p!(dir)

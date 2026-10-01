@@ -143,6 +143,11 @@ defmodule TF2Client.Requests do
     end
   end
 
+  def handle_chat_command({:set_town_creation_enabled, enabled}, sender, chat, _tags)
+      when is_boolean(enabled) do
+    submit("SET_TOWN_CREATION_ENABLED", sender, chat, %{enabled: enabled})
+  end
+
   def handle_chat_command(_other, _sender, _chat, _tags), do: :ignore
 
   defp profit_reply(sender) do
@@ -393,6 +398,14 @@ defmodule TF2Client.Requests do
   end
 
   defp action_description("VEHICLE", _params), do: "add a vehicle"
+
+  defp action_description("SET_TOWN_CREATION_ENABLED", %{enabled: true}) do
+    "enable town creation"
+  end
+
+  defp action_description("SET_TOWN_CREATION_ENABLED", %{enabled: false}) do
+    "disable town creation"
+  end
 
   defp action_description(_type, _params), do: "do that"
 

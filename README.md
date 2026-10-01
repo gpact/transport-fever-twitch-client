@@ -154,6 +154,7 @@ Burrito maintenance commands:
 - `!pause <claim|town|line|vehicle|all>` → pause a redemption type (mods/broadcaster only)
 - `!resume <claim|town|line|vehicle|all>` → resume a redemption type (mods/broadcaster only)
 - `!paused` → list paused redemption types (mods/broadcaster only)
+- `!towncreation <on|off>` → enable/disable automatic town creation (mods/broadcaster only)
 - `!claim [company name]` → create/claim company
 - `!town [company name]` → purchase/assign a town
 - `!line <carrier> <cargo>` → purchase/assign a transport line

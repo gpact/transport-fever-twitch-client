@@ -41,13 +41,14 @@ defmodule TF2Client.ResponsePoller do
 
   defp poll_pending_responses do
     for order_id <- RequestTracker.pending_ids() do
-      with %{channel: channel} <- RequestTracker.get(order_id),
+      with %{channel: channel} = tracked <- RequestTracker.get(order_id),
            response_path <- GameBridge.response_json_path(order_id),
            true <- File.exists?(response_path),
            {:ok, json} <- File.read(response_path),
            {:ok, parsed} <- Response.parse(json),
+           parsed <- fill_tracked_request_data(parsed, tracked),
            message when is_binary(message) <- Response.format(parsed) do
-        maybe_send(channel, message)
+        maybe_send(channel, message, parsed.type)
         File.rm(response_path)
 
         if parsed.completed do
@@ -62,13 +63,35 @@ defmodule TF2Client.ResponsePoller do
     end
   end
 
-  defp maybe_send(channel, message) when is_binary(channel) and is_binary(message) do
-    sender = Application.get_env(:tf2_client, :chat_sender, TF2Client.Chat.TMI)
+  defp fill_tracked_request_data(parsed, tracked) when is_map(parsed) and is_map(tracked) do
+    parsed
+    |> put_tracked_string(:username, Map.get(tracked, :username))
+    |> put_tracked_string(:type, Map.get(tracked, :type))
+  end
 
-    if sender == TF2Client.Chat.TMI and not ChatbotState.enabled?(channel) do
-      :ok
-    else
-      Chat.send(channel, message)
+  defp put_tracked_string(parsed, key, value) when is_binary(value) do
+    case Map.get(parsed, key) do
+      nil -> Map.put(parsed, key, value)
+      "" -> Map.put(parsed, key, value)
+      _existing -> parsed
+    end
+  end
+
+  defp put_tracked_string(parsed, _key, _value), do: parsed
+
+  defp maybe_send(channel, message, type) when is_binary(channel) and is_binary(message) do
+    case should_send?(channel, type) do
+      true -> Chat.send(channel, message)
+      false -> :ok
+    end
+  end
+
+  defp should_send?(_channel, "SET_TOWN_CREATION_ENABLED"), do: true
+
+  defp should_send?(channel, _type) do
+    case Application.get_env(:tf2_client, :chat_sender, TF2Client.Chat.TMI) do
+      TF2Client.Chat.TMI -> ChatbotState.enabled?(channel)
+      _custom_sender -> true
     end
   end
 end

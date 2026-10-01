@@ -25,6 +25,8 @@ defmodule TF2Client.Commands do
                           "all" => :all
                         })
 
+  @admin_commands ["tfon", "tfoff", "pause", "resume", "paused", "towncreation"]
+
   def examples do
     [
       "!claim [company name]",
@@ -41,9 +43,16 @@ defmodule TF2Client.Commands do
       "!tfoff",
       "!paused",
       "!pause <claim|town|townname|line|vehicle|all>",
-      "!resume <claim|town|townname|line|vehicle|all>"
+      "!resume <claim|town|townname|line|vehicle|all>",
+      "!towncreation <on|off>"
     ]
   end
+
+  def admin_command?(name) when is_binary(name) do
+    String.downcase(String.trim(name)) in @admin_commands
+  end
+
+  def admin_command?(_), do: false
 
   def pausable_commands do
     @pausable_commands
@@ -144,6 +153,12 @@ defmodule TF2Client.Commands do
       ["resume", target] ->
         parse_pause(:resume, target)
 
+      ["towncreation"] ->
+        {:error, "usage: !towncreation <on|off>"}
+
+      ["towncreation", state] ->
+        parse_town_creation(state)
+
       ["claim"] ->
         {:ok, {:claim, nil}}
 
@@ -234,4 +249,17 @@ defmodule TF2Client.Commands do
 
   defp pause_usage(:pause), do: "!pause <claim|town|townname|line|vehicle|all>"
   defp pause_usage(:resume), do: "!resume <claim|town|townname|line|vehicle|all>"
+
+  defp parse_town_creation(state) when is_binary(state) do
+    case String.downcase(String.trim(state)) do
+      val when val in ["on", "true", "enable", "enabled", "1"] ->
+        {:ok, {:set_town_creation_enabled, true}}
+
+      val when val in ["off", "false", "disable", "disabled", "0"] ->
+        {:ok, {:set_town_creation_enabled, false}}
+
+      _ ->
+        {:error, "usage: !towncreation <on|off>"}
+    end
+  end
 end

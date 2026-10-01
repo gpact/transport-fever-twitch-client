@@ -33,11 +33,14 @@ defmodule TF2Client.Bot do
       {:ok, {:resume, target}} ->
         maybe_resume(chat, sender, tags, target)
 
+      {:ok, {:set_town_creation_enabled, enabled}} ->
+        maybe_set_town_creation_enabled(chat, sender, tags, enabled)
+
       {:ok, command} ->
         maybe_handle_command(chat, sender, command, tags)
 
       {:error, error} when is_binary(error) ->
-        maybe_report_error(chat, sender, message, error)
+        maybe_report_error(chat, sender, tags, message, error)
     end
   end
 
@@ -121,6 +124,17 @@ defmodule TF2Client.Bot do
     end
   end
 
+  defp maybe_set_town_creation_enabled(chat, sender, tags, enabled) when is_boolean(enabled) do
+    case broadcaster_or_mod?(sender, chat, tags) do
+      true ->
+        {:reply, reply} = Requests.handle_chat_command({:set_town_creation_enabled, enabled}, sender, chat, tags)
+        say(chat, reply)
+
+      false ->
+        :ok
+    end
+  end
+
   defp maybe_handle_command(chat, sender, command, tags) do
     case ChatbotState.enabled?(chat) do
       true ->
@@ -161,16 +175,32 @@ defmodule TF2Client.Bot do
     end
   end
 
-  defp maybe_report_error(chat, sender, message, error) do
-    case ChatbotState.enabled?(chat) do
+  defp maybe_report_error(chat, sender, tags, message, error) do
+    case admin_message_command?(message) do
       true ->
-        case paused_message_command?(chat, message) do
-          true -> :ok
-          false -> say(chat, "@#{sender} #{error}")
+        case broadcaster_or_mod?(sender, chat, tags) do
+          true -> say(chat, "@#{sender} #{error}")
+          false -> :ok
         end
 
       false ->
-        :ok
+        case ChatbotState.enabled?(chat) do
+          true ->
+            case paused_message_command?(chat, message) do
+              true -> :ok
+              false -> say(chat, "@#{sender} #{error}")
+            end
+
+          false ->
+            :ok
+        end
+    end
+  end
+
+  defp admin_message_command?(message) do
+    case Commands.command_name(message) do
+      nil -> false
+      name -> Commands.admin_command?(name)
     end
   end
 

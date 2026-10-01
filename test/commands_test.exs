@@ -47,6 +47,22 @@ defmodule TF2Client.CommandsTest do
     assert {:error, _} = Commands.parse("!resume garbage")
   end
 
+  test "parses town creation toggle command" do
+    assert {:ok, {:set_town_creation_enabled, true}} = Commands.parse("!towncreation on")
+    assert {:ok, {:set_town_creation_enabled, true}} = Commands.parse("!towncreation ON")
+    assert {:ok, {:set_town_creation_enabled, true}} = Commands.parse("!towncreation true")
+    assert {:ok, {:set_town_creation_enabled, true}} = Commands.parse("!towncreation enable")
+    assert {:ok, {:set_town_creation_enabled, false}} = Commands.parse("!towncreation off")
+    assert {:ok, {:set_town_creation_enabled, false}} = Commands.parse("!towncreation OFF")
+    assert {:ok, {:set_town_creation_enabled, false}} = Commands.parse("!towncreation false")
+    assert {:ok, {:set_town_creation_enabled, false}} = Commands.parse("!towncreation disable")
+    assert {:error, "usage: !towncreation <on|off>"} = Commands.parse("!towncreation")
+    assert {:error, "usage: !towncreation <on|off>"} = Commands.parse("!towncreation invalid")
+    assert "!towncreation <on|off>" in Commands.examples()
+    assert Commands.admin_command?("towncreation")
+    refute Commands.admin_command?("claim")
+  end
+
   test "parses claim and town" do
     assert {:ok, {:claim, nil}} = Commands.parse("!claim")
     assert {:ok, {:claim, "My Co"}} = Commands.parse("!claim My Co")
