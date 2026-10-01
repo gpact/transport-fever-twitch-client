@@ -130,7 +130,7 @@ defmodule TF2Client.Application do
   end
 
   def ensure_twitch_started(supervisor \\ TF2Client.Supervisor) do
-    case supervisor_alive?(supervisor) do
+    case supervisor_alive?(supervisor) and start_twitch_bot?() do
       true ->
         case Process.whereis(TF2Client.TwitchSupervisor) do
           nil ->
@@ -172,6 +172,16 @@ defmodule TF2Client.Application do
         end
 
         {:error, reason}
+    end
+  end
+
+  defp start_twitch_bot? do
+    case test_env?() do
+      true ->
+        System.get_env("TF_ENABLE_TEST_TWITCH_BOT") in ["1", "true"]
+
+      false ->
+        true
     end
   end
 

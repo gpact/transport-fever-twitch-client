@@ -32,6 +32,7 @@ defmodule TF2Client.ResponsePollerTest do
     System.put_env(@game_files_env, dir)
 
     ensure_request_tracker_started()
+    ensure_response_poller_started()
     clear_request_tracker()
 
     on_exit(fn ->
@@ -132,15 +133,25 @@ defmodule TF2Client.ResponsePollerTest do
   end
 
   defp clear_request_tracker do
+    clear_request_tracker(Process.whereis(RequestTracker))
+  end
+
+  defp clear_request_tracker(nil), do: :ok
+
+  defp clear_request_tracker(_pid) do
     Enum.each(RequestTracker.pending_ids(), &RequestTracker.untrack/1)
   end
 
   defp ensure_request_tracker_started do
-    case Process.whereis(RequestTracker) do
-      nil -> start_supervised!(RequestTracker)
-      _pid -> :ok
-    end
+    ensure_started(Process.whereis(RequestTracker), RequestTracker)
   end
+
+  defp ensure_response_poller_started do
+    ensure_started(Process.whereis(ResponsePoller), ResponsePoller)
+  end
+
+  defp ensure_started(nil, module), do: start_supervised!(module)
+  defp ensure_started(_pid, _module), do: :ok
 
   defp temp_dir do
     random_bytes = :crypto.strong_rand_bytes(6)

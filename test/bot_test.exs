@@ -21,13 +21,7 @@ defmodule TF2Client.BotTest do
 
     on_exit(fn ->
       clear_request_tracker()
-
-      if previous_game_files_dir do
-        System.put_env(@game_files_env, previous_game_files_dir)
-      else
-        System.delete_env(@game_files_env)
-      end
-
+      restore_env(@game_files_env, previous_game_files_dir)
       File.rm_rf(dir)
     end)
 
@@ -80,15 +74,24 @@ defmodule TF2Client.BotTest do
   end
 
   defp clear_request_tracker do
+    clear_request_tracker(Process.whereis(RequestTracker))
+  end
+
+  defp clear_request_tracker(nil), do: :ok
+
+  defp clear_request_tracker(_pid) do
     Enum.each(RequestTracker.pending_ids(), &RequestTracker.untrack/1)
   end
 
   defp ensure_request_tracker_started do
-    case Process.whereis(RequestTracker) do
-      nil -> start_supervised!(RequestTracker)
-      _pid -> :ok
-    end
+    ensure_started(Process.whereis(RequestTracker), RequestTracker)
   end
+
+  defp ensure_started(nil, module), do: start_supervised!(module)
+  defp ensure_started(_pid, _module), do: :ok
+
+  defp restore_env(key, nil), do: System.delete_env(key)
+  defp restore_env(key, value), do: System.put_env(key, value)
 
   defp temp_dir do
     random_bytes = :crypto.strong_rand_bytes(6)
