@@ -17,7 +17,8 @@ defmodule TF2Client.Config do
     debug: false,
     redirect_uri: @default_redirect_uri,
     disable_rate_limits: false,
-    enable_bot: true
+    enable_bot: true,
+    transport_fever_version: :tf3
   ]
 
   @type t :: %__MODULE__{
@@ -31,7 +32,8 @@ defmodule TF2Client.Config do
           bot_oauth: String.t() | nil,
           game_files_path: String.t() | nil,
           disable_rate_limits: boolean(),
-          enable_bot: boolean()
+          enable_bot: boolean(),
+          transport_fever_version: :tf2 | :tf3
         }
 
   def config_path do
@@ -89,7 +91,8 @@ defmodule TF2Client.Config do
       "client_secret" => config.client_secret,
       "redirect_uri" => config.redirect_uri,
       "disable_rate_limits" => config.disable_rate_limits,
-      "enable_bot" => config.enable_bot
+      "enable_bot" => config.enable_bot,
+      "transport_fever_version" => to_string(config.transport_fever_version)
     }
 
     clean_data = Map.new(Enum.reject(data, fn {_k, v} -> is_nil(v) end))
@@ -190,6 +193,7 @@ defmodule TF2Client.Config do
     Debug Mode:     #{config.debug}
     Rate Limits:    #{rate_limit_status(config.disable_rate_limits)}
     Bot Enabled:    #{config.enable_bot}
+    TF Version:     #{config.transport_fever_version}
     """
   end
 
@@ -230,7 +234,8 @@ defmodule TF2Client.Config do
       bot_oauth: fetch_string(map, ["bot_oauth", "twitch_bot_oauth"]),
       game_files_path: fetch_string(map, ["game_files_path", "tf_integration_game_files"]),
       disable_rate_limits: fetch_bool(map, ["disable_rate_limits", "tf_disable_rate_limits"], false),
-      enable_bot: fetch_bool(map, ["enable_bot", "tf_enable_twitch_bot"], true)
+      enable_bot: fetch_bool(map, ["enable_bot", "tf_enable_twitch_bot"], true),
+      transport_fever_version: fetch_version(map, ["transport_fever_version", "game_version"])
     }
   end
 
@@ -247,8 +252,24 @@ defmodule TF2Client.Config do
         bot_oauth: env_override("TWITCH_BOT_OAUTH", config.bot_oauth),
         game_files_path: env_override("TF_INTEGRATION_GAME_FILES", config.game_files_path),
         disable_rate_limits: env_override_bool("TF_DISABLE_RATE_LIMITS", config.disable_rate_limits),
-        enable_bot: env_override_bool("TF_ENABLE_TWITCH_BOT", config.enable_bot)
+        enable_bot: env_override_bool("TF_ENABLE_TWITCH_BOT", config.enable_bot),
+        transport_fever_version: env_override_version("TRANSPORT_FEVER_VERSION", config.transport_fever_version)
     }
+  end
+
+  defp fetch_version(map, keys) when is_map(map) and is_list(keys) do
+    case fetch_string(map, keys) do
+      nil -> :tf3
+      val -> TF2Client.TransportFever.parse_version(val)
+    end
+  end
+
+  defp env_override_version(key, default) when is_binary(key) do
+    case System.get_env(key) do
+      nil -> default
+      "" -> default
+      val -> TF2Client.TransportFever.parse_version(val)
+    end
   end
 
   defp env_override(key, default) when is_binary(key) do

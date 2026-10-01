@@ -3,10 +3,6 @@ defmodule TF2Client.Requests do
 
   @available_command_examples TF2Client.Commands.examples()
 
-  @carrier_types Enum.map(TF2Client.Game.carrier_types(), &to_string/1)
-
-  @cargo_types Enum.map(TF2Client.Game.cargo_types(), &to_string/1)
-
   require Logger
 
   alias TF2Client.GameBridge
@@ -14,6 +10,7 @@ defmodule TF2Client.Requests do
   alias TF2Client.RateLimiter
   alias TF2Client.RequestQueue
   alias TF2Client.RequestTracker
+  alias TF2Client.TransportFever
 
   @purchase_rate_rule %{
     cooldown_seconds: 5 * 60,
@@ -32,11 +29,11 @@ defmodule TF2Client.Requests do
   end
 
   def handle_chat_command({:carriers}, _sender, _chat, _tags) do
-    {:reply, "Carrier types: #{Enum.join(@carrier_types, ", ")}"}
+    {:reply, "Carrier types: #{Enum.join(TransportFever.carrier_types(), ", ")}"}
   end
 
   def handle_chat_command({:cargo}, _sender, _chat, _tags) do
-    {:reply, "Cargo types: #{Enum.join(@cargo_types, ", ")}"}
+    {:reply, "Cargo types: #{Enum.join(TransportFever.cargo_types(), ", ")}"}
   end
 
   def handle_chat_command({:profit}, sender, _chat, _tags) do

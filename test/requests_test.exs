@@ -11,6 +11,7 @@ defmodule TF2Client.RequestsTest do
     previous_disable_rate_limits = Application.get_env(:tf2_client, :disable_rate_limits)
     previous_request_queue_delays = Application.get_env(:tf2_client, :request_queue_delays_ms)
     previous_game_files_dir = System.get_env(@game_files_env)
+    previous_tf_version = Application.get_env(:tf2_client, :transport_fever_version)
 
     RateLimiter.reset()
     Application.put_env(:tf2_client, :request_queue_delays_ms, %{})
@@ -18,6 +19,7 @@ defmodule TF2Client.RequestsTest do
     on_exit(fn ->
       restore_app_env(:disable_rate_limits, previous_disable_rate_limits)
       restore_app_env(:request_queue_delays_ms, previous_request_queue_delays)
+      restore_app_env(:transport_fever_version, previous_tf_version)
       restore_game_files_env(previous_game_files_dir)
     end)
 
@@ -168,6 +170,66 @@ defmodule TF2Client.RequestsTest do
     refute String.contains?(lua, ~s(enabled = "off"))
     refute String.contains?(lua, "townCreationEnabled")
     refute String.contains?(lua, "town_creation_enabled")
+  end
+
+  test "returns TF3 carriers and cargo by default" do
+    assert {:reply, carrier_msg} =
+             Requests.handle_chat_command({:carriers}, "alice", "somechannel", %{})
+
+    assert String.contains?(carrier_msg, "Carrier types: road, rail, tram, water, air")
+
+    assert {:reply, cargo_msg} =
+             Requests.handle_chat_command({:cargo}, "alice", "somechannel", %{})
+
+    assert String.contains?(cargo_msg, "canned_food")
+    assert String.contains?(cargo_msg, "iron_ore")
+    assert String.contains?(cargo_msg, "beverages")
+    refute String.contains?(cargo_msg, "tinned_food")
+    refute String.contains?(cargo_msg, "construction_materials")
+  end
+
+  test "returns TF2 carriers and cargo when configured" do
+    Application.put_env(:tf2_client, :transport_fever_version, :tf2)
+
+    assert {:reply, carrier_msg} =
+             Requests.handle_chat_command({:carriers}, "alice", "somechannel", %{})
+
+    assert String.contains?(carrier_msg, "Carrier types: road, rail, air, tram, water")
+
+    assert {:reply, cargo_msg} =
+             Requests.handle_chat_command({:cargo}, "alice", "somechannel", %{})
+
+    assert String.contains?(cargo_msg, "food")
+    assert String.contains?(cargo_msg, "construction_materials")
+    refute String.contains?(cargo_msg, "beverages")
+  end
+
+  test "translates canned_food to tinned_food on wire in TF3 while keeping user reply" do
+    dir = prepare_game_files()
+    ensure_request_tracker_started()
+
+    assert {:reply, "@alice got it! I'll try to add a road vehicle for canned_food."} =
+             Requests.handle_chat_command({:vehicle, "road", "canned_food"}, "alice", "channel", %{})
+
+    lua = read_submitted_lua(dir)
+
+    assert String.contains?(lua, ~s(game_version = "tf3"))
+    assert String.contains?(lua, ~s(cargo = "tinned_food"))
+    assert String.contains?(lua, ~s(carrier = "road"))
+  end
+
+  test "sends game_version tf2 when configured" do
+    dir = prepare_game_files()
+    ensure_request_tracker_started()
+    Application.put_env(:tf2_client, :transport_fever_version, :tf2)
+
+    assert {:reply, "@alice got it! I'll try to add a road vehicle for food."} =
+             Requests.handle_chat_command({:vehicle, "road", "food"}, "alice", "channel", %{})
+
+    lua = read_submitted_lua(dir)
+
+    assert String.contains?(lua, ~s(game_version = "tf2"))
+    assert String.contains?(lua, ~s(cargo = "food"))
   end
 
   defp prepare_game_files do

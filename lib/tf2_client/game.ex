@@ -1,10 +1,13 @@
 defmodule TF2Client.Game do
-  @carrier_types ~w[road rail air tram water]a
+  @moduledoc false
 
-  @cargo_types ~w[food planks logs machines fuel stone grain plastic tools goods
-                  crude construction_materials steel oil iron_ore passengers coal]a
+  alias TF2Client.TransportFever
 
-  def carrier_types, do: @carrier_types
+  def carrier_types do
+    Enum.map(TransportFever.carrier_types(), &String.to_atom/1)
+  end
 
-  def cargo_types, do: @cargo_types
+  def cargo_types do
+    Enum.map(TransportFever.cargo_types(), &String.to_atom/1)
+  end
 end

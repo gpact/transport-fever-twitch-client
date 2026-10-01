@@ -67,16 +67,20 @@ defmodule TF2Client.GameBridge do
   end
 
   defp write_order(order_id, type, username, save_uuid, params) do
+    game_version = Atom.to_string(TF2Client.TransportFever.version())
+
     payload = %{
       schema_version: @schema_version,
+      game_version: game_version,
       order: %{
         order_id: order_id,
         request_type: type,
         type: type,
         username: username,
         save_uuid: save_uuid,
+        game_version: game_version,
         timestamp: System.os_time(:second),
-        params: Map.merge(%{username: username}, params)
+        params: Map.merge(%{username: username}, wire_params(params))
       }
     }
 
@@ -149,5 +153,18 @@ defmodule TF2Client.GameBridge do
   defp new_order_id do
     random_bytes = :crypto.strong_rand_bytes(16)
     Base.encode16(random_bytes, case: :lower)
+  end
+
+  defp wire_params(params) when is_map(params) do
+    params
+    |> maybe_translate_wire_field(:carrier, &TF2Client.TransportFever.wire_carrier/1)
+    |> maybe_translate_wire_field(:cargo, &TF2Client.TransportFever.wire_cargo/1)
+  end
+
+  defp maybe_translate_wire_field(params, key, transform) do
+    case Map.get(params, key) do
+      value when is_binary(value) -> Map.put(params, key, transform.(value))
+      _ -> params
+    end
   end
 end

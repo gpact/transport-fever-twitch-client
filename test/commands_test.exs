@@ -1,7 +1,20 @@
 defmodule TF2Client.CommandsTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias TF2Client.Commands
+
+  setup do
+    previous_version = Application.get_env(:tf2_client, :transport_fever_version)
+
+    on_exit(fn ->
+      case previous_version do
+        nil -> Application.delete_env(:tf2_client, :transport_fever_version)
+        val -> Application.put_env(:tf2_client, :transport_fever_version, val)
+      end
+    end)
+
+    :ok
+  end
 
   test "ignores non-commands" do
     assert :ignore = Commands.parse("hello")
@@ -90,5 +103,24 @@ defmodule TF2Client.CommandsTest do
   test "validates cargo" do
     assert {:error, "invalid cargo non_existent" <> _} =
              Commands.parse("!vehicle road non_existent")
+  end
+
+  test "parses TF3 specific cargo and tram carrier" do
+    assert {:ok, {:line, "tram", "passengers"}} = Commands.parse("!line tram passengers")
+    assert {:ok, {:vehicle, "road", "canned_food"}} = Commands.parse("!vehicle road canned_food")
+    assert {:ok, {:vehicle, "road", "canned_food"}} = Commands.parse("!vehicle road canned food")
+    assert {:ok, {:vehicle, "road", "beverages"}} = Commands.parse("!vehicle road beverages")
+    assert {:ok, {:vehicle, "road", "crude_oil"}} = Commands.parse("!vehicle road crude_oil")
+  end
+
+  test "parses and validates in TF2 mode when configured" do
+    Application.put_env(:tf2_client, :transport_fever_version, :tf2)
+
+    assert {:ok, {:vehicle, "road", "food"}} = Commands.parse("!vehicle road food")
+
+    assert {:ok, {:vehicle, "road", "construction_materials"}} =
+             Commands.parse("!vehicle road construction_materials")
+
+    assert {:error, "invalid cargo beverages" <> _} = Commands.parse("!vehicle road beverages")
   end
 end

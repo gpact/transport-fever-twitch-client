@@ -1,5 +1,5 @@
 defmodule TF2Client.SetupWizardTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias TF2Client.Config
   alias TF2Client.SetupWizard

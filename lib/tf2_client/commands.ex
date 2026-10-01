@@ -3,8 +3,7 @@ defmodule TF2Client.Commands do
 
   @command_flag "!"
 
-  @valid_carriers Enum.map(TF2Client.Game.carrier_types(), &to_string/1)
-  @valid_cargo Enum.map(TF2Client.Game.cargo_types(), &to_string/1)
+  alias TF2Client.TransportFever
 
   @pausable_commands [:claim, :town, :town_rename, :line, :vehicle]
 
@@ -190,11 +189,17 @@ defmodule TF2Client.Commands do
 
   defp parse_carrier_cargo(kind, rest) do
     case String.split(rest, ~r/\s+/, parts: 2, trim: true) do
-      [carrier, cargo] ->
-        carrier = normalize_game_type(carrier)
-        cargo = normalize_cargo(normalize_game_type(cargo))
+      [carrier_raw, cargo_raw] ->
+        with {:ok, carrier} <- TransportFever.normalize_carrier(carrier_raw),
+             {:ok, cargo} <- TransportFever.normalize_cargo(cargo_raw) do
+          {:ok, {kind, carrier, cargo}}
+        else
+          {:error, :invalid_carrier} ->
+            {:error, invalid_carrier_message(carrier_raw)}
 
-        validate_carrier_cargo(kind, carrier, cargo)
+          {:error, :invalid_cargo} ->
+            {:error, invalid_cargo_message(cargo_raw)}
+        end
 
       _ ->
         usage =
@@ -207,28 +212,12 @@ defmodule TF2Client.Commands do
     end
   end
 
-  defp normalize_game_type(value) when is_binary(value) do
-    value = String.trim(value)
-    String.downcase(value)
-  end
-
-  defp normalize_cargo("passenger"), do: "passengers"
-  defp normalize_cargo(cargo), do: cargo
-
-  defp validate_carrier_cargo(kind, carrier, cargo) do
-    case {carrier in @valid_carriers, cargo in @valid_cargo} do
-      {true, true} -> {:ok, {kind, carrier, cargo}}
-      {false, _cargo_valid?} -> {:error, invalid_carrier_message(carrier)}
-      {true, false} -> {:error, invalid_cargo_message(cargo)}
-    end
-  end
-
   defp invalid_carrier_message(carrier) do
-    "invalid carrier #{carrier}. Use: #{Enum.join(@valid_carriers, ", ")}"
+    "invalid carrier #{carrier}. Use: #{Enum.join(TransportFever.carrier_types(), ", ")}"
   end
 
   defp invalid_cargo_message(cargo) do
-    "invalid cargo #{cargo}. Use: #{Enum.join(@valid_cargo, ", ")}"
+    "invalid cargo #{cargo}. Use: #{Enum.join(TransportFever.cargo_types(), ", ")}"
   end
 
   defp command_name_from_flagged(message) do

@@ -30,6 +30,8 @@ defmodule TF2Client.Application do
   defp maybe_run_setup_wizard do
     case Config.load() do
       {:ok, %Config{} = config} ->
+        init_transport_fever_version(config.transport_fever_version)
+
         case Config.configured?(config) do
           true ->
             :ok
@@ -49,6 +51,13 @@ defmodule TF2Client.Application do
 
       _other ->
         :ok
+    end
+  end
+
+  defp init_transport_fever_version(version) do
+    case Application.get_env(:tf2_client, :transport_fever_version) do
+      nil -> Application.put_env(:tf2_client, :transport_fever_version, version)
+      _already_set -> :ok
     end
   end
 
@@ -77,6 +86,9 @@ defmodule TF2Client.Application do
   end
 
   defp start_supervisor do
+    version = TF2Client.TransportFever.version()
+    Logger.info("Transport Fever compatibility mode: #{version}")
+
     opts = [strategy: :one_for_one, name: TF2Client.Supervisor]
 
     with {:ok, supervisor} <- Supervisor.start_link([TF2Client.FinchConfig.child_spec()], opts) do
