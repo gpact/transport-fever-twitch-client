@@ -3,25 +3,23 @@ defmodule TF2Client.SetupWizard do
 
   alias TF2Client.Config
 
-  def interactive? do
-    case non_interactive_env?() do
-      true ->
-        false
+  def automatic_setup? do
+    not non_interactive_env?()
+  end
 
-      false ->
-        case :io.getopts() do
-          opts when is_list(opts) ->
-            Keyword.get(opts, :stdin, false) and Keyword.get(opts, :terminal, false)
+  def ensure_configured(%Config{enable_bot: false} = config), do: {:ok, config}
 
-          _other ->
-            false
-        end
+  def ensure_configured(%Config{} = config) do
+    case Config.configured?(config) do
+      true -> {:ok, config}
+      false -> run(config)
     end
   end
 
   def run do
-    {:ok, config} = Config.load()
-    run(config)
+    with {:ok, config} <- Config.load() do
+      run(config)
+    end
   end
 
   def run(%Config{} = existing_config) do

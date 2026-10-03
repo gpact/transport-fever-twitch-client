@@ -13,8 +13,9 @@ defmodule TF2Client.Application do
   def start(_type, _args) do
     case TF2Client.CLI.command() do
       :run ->
-        maybe_run_setup_wizard()
-        start_supervisor()
+        with :ok <- maybe_run_setup_wizard() do
+          start_supervisor()
+        end
 
       :setup ->
         start_setup_command()
@@ -28,29 +29,26 @@ defmodule TF2Client.Application do
   end
 
   defp maybe_run_setup_wizard do
-    case Config.load() do
-      {:ok, %Config{} = config} ->
-        init_transport_fever_version(config.transport_fever_version)
+    with {:ok, %Config{} = config} <- Config.load(),
+         {:ok, %Config{} = configured} <- prepare_config(config) do
+      init_transport_fever_version(configured.transport_fever_version)
+      :ok
+    else
+      {:error, reason} ->
+        Logger.error(
+          "Client setup could not complete (#{inspect(reason)}). " <>
+            "Run the executable with the setup command in a terminal, " <>
+            "or configure bot_user and channels in #{Config.config_path()}."
+        )
 
-        case Config.configured?(config) do
-          true ->
-            :ok
+        {:error, {:setup_failed, reason}}
+    end
+  end
 
-          false ->
-            case SetupWizard.interactive?() do
-              true ->
-                case SetupWizard.run(config) do
-                  {:ok, _updated} -> :ok
-                  {:error, _reason} -> :ok
-                end
-
-              false ->
-                :ok
-            end
-        end
-
-      _other ->
-        :ok
+  defp prepare_config(config) do
+    case SetupWizard.automatic_setup?() do
+      true -> SetupWizard.ensure_configured(config)
+      false -> {:ok, config}
     end
   end
 

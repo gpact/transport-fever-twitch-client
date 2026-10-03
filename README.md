@@ -22,7 +22,11 @@ TF2Client supports three ways to configure settings (evaluated in order of prece
 3. **Interactive Setup Wizard** (prompts you on first launch if unconfigured)
 
 #### Quick Setup via Interactive Wizard
-If you start the bot without any prior configuration in a terminal, it will guide you through setting up your channel and credentials:
+On first launch, including double-clicking the bundled Windows executable, the bot starts setup automatically when the channel or bot username is missing. After saving your settings, it continues to Twitch browser authorization if needed. Later launches reuse your settings.
+
+If setup is cancelled, input is unavailable, or the configuration cannot be read, startup stops with an error. Open a terminal and run the setup command below, or provide a valid configuration file. Automatic setup is skipped in tests, IEx, and when the bot is explicitly disabled.
+
+You can also run setup manually:
 
 ```bash
 # On Linux / macOS:
