@@ -41,7 +41,8 @@ jobs:
       - name: Verify Tag Matches mix.exs
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          MIX_VERSION=$(mix run -e 'IO.puts(Mix.Project.config()[:version])')
+          # Read project metadata without compiling or starting the application.
+          MIX_VERSION=$(elixir -e 'Mix.start(); Code.require_file("mix.exs"); IO.puts(Keyword.fetch!(Mix.Project.config(), :version))')
           echo "Git tag version: $TAG"
           echo "mix.exs version: $MIX_VERSION"
           if [ "$TAG" != "$MIX_VERSION" ]; then
