@@ -4,6 +4,11 @@ Twitch chatbot for a Transport Fever Twitch integration mod.
 
 It connects to Twitch chat via `tmi`, writes request `.lua` files for the game mod to process, and polls `*.json` response files to reply in chat.
 
+> [!IMPORTANT]
+> **Windows users: install the Visual C++ runtime before launching the client.**
+> The bundled executable requires the [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vc14/vc_redist.x64.exe). If Windows shows `VCRUNTIME140.dll was not found`, install this package, then launch the client again.
+> Windows 10 build 1511 or newer is required. You do not need Elixir or Erlang installed.
+
 ## Setup
 
 ### 1. Zero-Config Twitch Login (Default)
@@ -134,10 +139,6 @@ Build machine requirements:
 - `zig` 0.15.2
 - `xz`
 - `7z` or `7zz` for Windows targets
-
-The Windows machine running the executable does not need Elixir or Erlang installed. It does need the MSVC runtime required by the bundled Erlang runtime and Windows 10 build 1511 or newer.
-
-If Windows shows `VCRUNTIME140.dll was not found`, install the Microsoft Visual C++ Redistributable x64 package from `https://aka.ms/vc14/vc_redist.x64.exe`.
 
 #### Available Packaged Commands:
 
