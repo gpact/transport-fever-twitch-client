@@ -16,16 +16,59 @@ defmodule TF2Client.ResponsePoller do
   end
 
   @impl GenServer
-  def init(state) do
+  def init(_state) do
+    recovered_requests = recover_requests()
     schedule_tick()
-    {:ok, state}
+    {:ok, %{recovered_requests: recovered_requests}}
   end
 
   @impl GenServer
   def handle_info(:tick, state) do
+    recovered_requests = Enum.reject(state.recovered_requests, &acknowledge_recovered_request/1)
     handle_tick()
     schedule_tick()
-    {:noreply, state}
+    {:noreply, %{state | recovered_requests: recovered_requests}}
+  end
+
+  # Snapshot existing queues at startup: newly submitted requests use RequestTracker.
+  # Channel routing is not persisted, so recovered outcomes are cleaned without chat replay.
+  defp recover_requests do
+    GameBridge.requests_dir()
+    |> Path.join("requests_*.txt")
+    |> Path.wildcard()
+    |> Enum.flat_map(&recover_queue/1)
+  end
+
+  defp recover_queue(path) do
+    with [_, save_uuid] <- Regex.run(~r/\Arequests_([A-Za-z0-9_-]+)\.txt\z/, Path.basename(path)),
+         {:ok, contents} <- File.read(path) do
+      contents
+      |> String.split("\n", trim: true)
+      |> Enum.map(&{&1, save_uuid})
+    else
+      _ -> []
+    end
+  end
+
+  defp acknowledge_recovered_request({order_id, save_uuid}) do
+    case RequestTracker.get(order_id) do
+      nil -> cleanup_recovered_response(order_id, save_uuid)
+      _tracked -> true
+    end
+  end
+
+  defp cleanup_recovered_response(order_id, save_uuid) do
+    response_path = GameBridge.response_json_path(order_id)
+
+    with {:ok, json} <- File.read(response_path),
+         {:ok, %{completed: true}} <- Response.parse(json),
+         :ok <- GameBridge.complete_request(order_id, save_uuid) do
+      File.rm(GameBridge.order_lua_path(order_id))
+      File.rm(response_path)
+      true
+    else
+      _ -> false
+    end
   end
 
   defp schedule_tick do
@@ -48,20 +91,29 @@ defmodule TF2Client.ResponsePoller do
            {:ok, parsed} <- Response.parse(json),
            parsed <- fill_tracked_request_data(parsed, tracked),
            message when is_binary(message) <- Response.format(parsed) do
-        maybe_send(channel, message, parsed.type)
-        File.rm(response_path)
+        case acknowledge_response(order_id, parsed, tracked) do
+          :ok ->
+            maybe_send(channel, message, parsed.type)
+            File.rm(response_path)
 
-        if parsed.completed do
-          RequestTracker.untrack(order_id)
-          File.rm(GameBridge.order_lua_path(order_id))
-        else
-          :ok
+          {:error, _reason} ->
+            :noop
         end
       else
         _ -> :noop
       end
     end
   end
+
+  defp acknowledge_response(order_id, %{completed: true}, tracked) do
+    with :ok <- GameBridge.complete_request(order_id, Map.get(tracked, :save_uuid)) do
+      File.rm(GameBridge.order_lua_path(order_id))
+      RequestTracker.untrack(order_id)
+      :ok
+    end
+  end
+
+  defp acknowledge_response(_order_id, _parsed, _tracked), do: :ok
 
   defp fill_tracked_request_data(parsed, tracked) when is_map(parsed) and is_map(tracked) do
     parsed

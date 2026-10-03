@@ -242,6 +242,7 @@ defmodule TF2Client.Requests do
           {:ok, order_id} ->
             RequestTracker.track(order_id, %{
               channel: chat,
+              save_uuid: save_uuid,
               username: sender,
               type: type
             })

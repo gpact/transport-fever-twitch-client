@@ -1,6 +1,7 @@
 defmodule TF2Client.RequestsTest do
   use ExUnit.Case, async: false
 
+  alias TF2Client.GameBridge
   alias TF2Client.RateLimiter
   alias TF2Client.Requests
   alias TF2Client.RequestTracker
@@ -251,7 +252,7 @@ defmodule TF2Client.RequestsTest do
   end
 
   defp read_submitted_lua(dir) do
-    requests = File.read!(Path.join(dir, "requests.txt"))
+    requests = File.read!(GameBridge.requests_path("save-123"))
     [order_id] = String.split(requests, "\n", trim: true)
     File.read!(Path.join(dir, "#{order_id}.lua"))
   end

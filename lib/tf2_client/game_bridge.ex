@@ -5,7 +5,6 @@ defmodule TF2Client.GameBridge do
 
   @schema_version 1
   @game_files_env "TF_INTEGRATION_GAME_FILES"
-  @requests_file "requests.txt"
   @game_state_file "gameState.json"
   @default_home_folder ".transport_fever"
   @default_temp_folder "transport_fever"
@@ -21,7 +20,15 @@ defmodule TF2Client.GameBridge do
     File.mkdir_p(requests_dir())
   end
 
-  def requests_path, do: Path.join(requests_dir(), @requests_file)
+  def requests_path(save_uuid), do: Path.join(requests_dir(), "requests_#{save_uuid}.txt")
+
+  # All queue mutations share a lock, including immediate and delayed submissions.
+  # Atomic replacement lets the mod read either complete version of the index.
+  def complete_request(order_id, save_uuid) when is_binary(save_uuid) do
+    update_requests(save_uuid, fn ids -> Enum.reject(ids, &(&1 == order_id)) end)
+  end
+
+  def complete_request(_order_id, _save_uuid), do: {:error, :save_uuid_missing}
   def game_state_path, do: Path.join(requests_dir(), @game_state_file)
   def order_lua_path(order_id), do: Path.join(requests_dir(), "#{order_id}.lua")
   def response_json_path(order_id), do: Path.join(requests_dir(), "#{order_id}.json")
@@ -88,15 +95,46 @@ defmodule TF2Client.GameBridge do
 
     with :ok <- ensure_requests_dir(),
          :ok <- File.write(order_lua_path(order_id), lua),
-         :ok <- append_request_id(order_id) do
+         :ok <- update_requests(save_uuid, fn ids -> ids ++ [order_id] end) do
       {:ok, order_id}
     else
       {:error, reason} -> {:error, {:file_error, reason}}
     end
   end
 
-  defp append_request_id(order_id) do
-    File.write(requests_path(), "#{order_id}\n", [:append])
+  defp update_requests(save_uuid, update) do
+    case Regex.match?(~r/\A[A-Za-z0-9_-]+\z/, save_uuid) do
+      true ->
+        path = requests_path(save_uuid)
+        :global.trans({{__MODULE__, path}, self()}, fn -> rewrite_requests(path, update) end)
+
+      false ->
+        {:error, :invalid_save_uuid}
+    end
+  end
+
+  defp rewrite_requests(path, update) do
+    with {:ok, ids} <- read_requests(path) do
+      contents = Enum.map(update.(ids), &(&1 <> "\n"))
+      temporary = path <> ".tmp"
+
+      with :ok <- File.write(temporary, contents),
+           :ok <- File.rename(temporary, path) do
+        :ok
+      else
+        error ->
+          File.rm(temporary)
+          error
+      end
+    end
+  end
+
+  defp read_requests(path) do
+    case File.read(path) do
+      {:ok, contents} -> {:ok, String.split(contents, "\n", trim: true)}
+      {:error, :enoent} -> {:ok, []}
+      error -> error
+    end
   end
 
   defp default_requests_dir do

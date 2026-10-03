@@ -48,7 +48,14 @@ defmodule TF2Client.ResponsePollerTest do
 
   test "polls and delivers SET_TOWN_CREATION_ENABLED response when confirmed enabled" do
     order_id = "test-order-1"
-    RequestTracker.track(order_id, %{channel: "streamer", username: "admin", type: "SET_TOWN_CREATION_ENABLED"})
+
+    RequestTracker.track(order_id, %{
+      save_uuid: "save-123",
+      channel: "streamer",
+      username: "admin",
+      type: "SET_TOWN_CREATION_ENABLED"
+    })
+
     File.write!(GameBridge.order_lua_path(order_id), "return {}")
 
     response_json =
@@ -78,7 +85,14 @@ defmodule TF2Client.ResponsePollerTest do
 
   test "polls and delivers SET_TOWN_CREATION_ENABLED response when confirmed disabled" do
     order_id = "test-order-2"
-    RequestTracker.track(order_id, %{channel: "streamer", username: "admin", type: "SET_TOWN_CREATION_ENABLED"})
+
+    RequestTracker.track(order_id, %{
+      save_uuid: "save-123",
+      channel: "streamer",
+      username: "admin",
+      type: "SET_TOWN_CREATION_ENABLED"
+    })
+
     File.write!(GameBridge.order_lua_path(order_id), "return {}")
 
     response_json =
@@ -106,7 +120,14 @@ defmodule TF2Client.ResponsePollerTest do
 
   test "fills missing response metadata from tracked request" do
     order_id = "test-order-3"
-    RequestTracker.track(order_id, %{channel: "streamer", username: "admin", type: "SET_SOME_FEATURE_ENABLED"})
+
+    RequestTracker.track(order_id, %{
+      save_uuid: "save-123",
+      channel: "streamer",
+      username: "admin",
+      type: "SET_SOME_FEATURE_ENABLED"
+    })
+
     File.write!(GameBridge.order_lua_path(order_id), "return {}")
 
     response_json =
@@ -130,6 +151,107 @@ defmodule TF2Client.ResponsePollerTest do
     assert RequestTracker.get(order_id) == nil
     refute File.exists?(GameBridge.response_json_path(order_id))
     refute File.exists?(GameBridge.order_lua_path(order_id))
+  end
+
+  for {label, completed, error} <- [
+        {"success", true, nil},
+        {"failure", true, "No town available"},
+        {"pending", false, nil}
+      ] do
+    test "#{label} response updates only its originating save queue" do
+      order_id = "response-order"
+      GameBridge.submit_with_order_id(order_id, "TOWN", "viewer", "save-a", %{})
+      GameBridge.submit_with_order_id("other", "TOWN", "viewer", "save-b", %{})
+      File.write!(GameBridge.game_state_path(), Jason.encode!(%{save_uuid: "save-b"}))
+
+      RequestTracker.track(order_id, %{
+        channel: "streamer",
+        username: "viewer",
+        type: "TOWN",
+        save_uuid: "save-a"
+      })
+
+      File.write!(
+        GameBridge.response_json_path(order_id),
+        Jason.encode!(%{
+          completed: unquote(completed),
+          error: unquote(error),
+          response: %{}
+        })
+      )
+
+      poller = Process.whereis(ResponsePoller)
+      send(poller, :tick)
+      :sys.get_state(poller)
+
+      assert_receive {:chat_message, "streamer", _}
+      assert File.read!(GameBridge.requests_path("save-b")) == "other\n"
+
+      assert File.read!(GameBridge.requests_path("save-a")) ==
+               unquote(if completed, do: "", else: "response-order\n")
+
+      assert is_nil(RequestTracker.get(order_id)) == unquote(completed)
+      assert File.exists?(GameBridge.order_lua_path(order_id)) == unquote(not completed)
+    end
+  end
+
+  test "retains terminal response and tracking until queue cleanup succeeds" do
+    order_id = "retry-cleanup"
+    GameBridge.submit_with_order_id(order_id, "TOWN", "viewer", "save-a", %{})
+
+    RequestTracker.track(order_id, %{
+      channel: "streamer",
+      username: "viewer",
+      type: "TOWN",
+      save_uuid: "save-a"
+    })
+
+    File.write!(GameBridge.response_json_path(order_id), Jason.encode!(%{completed: true, response: %{}}))
+    temporary = GameBridge.requests_path("save-a") <> ".tmp"
+    File.mkdir!(temporary)
+
+    poller = Process.whereis(ResponsePoller)
+    send(poller, :tick)
+    :sys.get_state(poller)
+    assert RequestTracker.get(order_id)
+    assert File.exists?(GameBridge.response_json_path(order_id))
+    assert File.exists?(GameBridge.order_lua_path(order_id))
+    refute_received {:chat_message, _, _}
+
+    File.rmdir!(temporary)
+    send(poller, :tick)
+    :sys.get_state(poller)
+    assert_receive {:chat_message, "streamer", _}
+    assert is_nil(RequestTracker.get(order_id))
+    assert File.read!(GameBridge.requests_path("save-a")) == ""
+  end
+
+  test "recovers queues after client restart and retains pending requests until terminal" do
+    GameBridge.submit_with_order_id("recovered", "TOWN", "viewer", "old-save", %{})
+    GameBridge.submit_with_order_id("waiting", "TOWN", "viewer", "other-save", %{})
+
+    File.write!(
+      GameBridge.response_json_path("recovered"),
+      Jason.encode!(%{
+        completed: true,
+        error: "No town available"
+      })
+    )
+
+    File.write!(GameBridge.response_json_path("waiting"), Jason.encode!(%{completed: false}))
+
+    assert {:ok, state} = ResponsePoller.init(%{})
+    assert {:noreply, state} = ResponsePoller.handle_info(:tick, state)
+    assert File.read!(GameBridge.requests_path("old-save")) == ""
+    assert File.read!(GameBridge.requests_path("other-save")) == "waiting\n"
+    refute File.exists?(GameBridge.response_json_path("recovered"))
+    assert File.exists?(GameBridge.order_lua_path("waiting"))
+    refute_received {:chat_message, _, _}
+
+    File.write!(GameBridge.response_json_path("waiting"), Jason.encode!(%{completed: true}))
+    assert {:noreply, %{recovered_requests: []}} = ResponsePoller.handle_info(:tick, state)
+    assert File.read!(GameBridge.requests_path("other-save")) == ""
+    refute File.exists?(GameBridge.order_lua_path("waiting"))
   end
 
   defp clear_request_tracker do

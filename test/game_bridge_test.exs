@@ -61,16 +61,16 @@ defmodule TF2Client.GameBridgeTest do
     assert GameBridge.requests_dir() == Path.join(temp_dir, "transport_fever")
   end
 
-  test "writes lua order file and appends to requests.txt" do
+  test "writes lua order file and appends to the save queue" do
     dir = put_game_files_dir()
     File.write!(Path.join(dir, "gameState.json"), ~s({"save_uuid":"save-123"}))
 
     assert {:ok, order_id} = GameBridge.submit("COMPANY", "someuser", %{company_name: "Some Co"})
     assert byte_size(order_id) == 32
     assert File.exists?(GameBridge.order_lua_path(order_id))
-    assert File.exists?(GameBridge.requests_path())
+    assert File.exists?(GameBridge.requests_path("save-123"))
 
-    requests = File.read!(GameBridge.requests_path())
+    requests = File.read!(GameBridge.requests_path("save-123"))
     assert String.contains?(requests, order_id)
 
     lua = File.read!(GameBridge.order_lua_path(order_id))
@@ -79,6 +79,51 @@ defmodule TF2Client.GameBridgeTest do
     assert String.contains?(lua, ~s(username = "someuser"))
     assert String.contains?(lua, ~s(save_uuid = "save-123"))
     assert String.contains?(lua, ~s(company_name = "Some Co"))
+  end
+
+  test "keeps saves separate and removes only the acknowledged request" do
+    put_game_files_dir()
+    assert {:ok, "a"} = GameBridge.submit_with_order_id("a", "TOWN", "viewer", "save-a", %{})
+    assert {:ok, "b"} = GameBridge.submit_with_order_id("b", "TOWN", "viewer", "save-b", %{})
+    assert {:ok, "c"} = GameBridge.submit_with_order_id("c", "TOWN", "viewer", "save-a", %{})
+
+    assert :ok = GameBridge.complete_request("a", "save-a")
+    assert :ok = GameBridge.complete_request("a", "save-a")
+    assert File.read!(GameBridge.requests_path("save-a")) == "c\n"
+    assert File.read!(GameBridge.requests_path("save-b")) == "b\n"
+  end
+
+  test "concurrent submissions and acknowledgements do not lose pending requests" do
+    put_game_files_dir()
+    GameBridge.submit_with_order_id("done", "TOWN", "viewer", "save-a", %{})
+
+    results =
+      1..20
+      |> Task.async_stream(
+        fn index ->
+          order_id = "order-#{index}"
+
+          assert {:ok, ^order_id} =
+                   GameBridge.submit_with_order_id(order_id, "TOWN", "viewer", "save-a", %{})
+
+          assert :ok = GameBridge.complete_request("done", "save-a")
+        end,
+        max_concurrency: 4
+      )
+      |> Enum.to_list()
+
+    assert Enum.all?(results, &match?({:ok, _}, &1))
+    ids = String.split(File.read!(GameBridge.requests_path("save-a")), "\n", trim: true)
+    assert Enum.sort(ids) == Enum.sort(Enum.map(1..20, &"order-#{&1}"))
+  end
+
+  test "failed queue replacement leaves the existing index intact" do
+    put_game_files_dir()
+    GameBridge.submit_with_order_id("keep", "TOWN", "viewer", "save-a", %{})
+    File.mkdir!(GameBridge.requests_path("save-a") <> ".tmp")
+
+    assert {:error, _} = GameBridge.complete_request("keep", "save-a")
+    assert File.read!(GameBridge.requests_path("save-a")) == "keep\n"
   end
 
   defp put_game_files_dir do

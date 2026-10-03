@@ -65,7 +65,7 @@ mix tf2.config
 - `TWITCH_MOD_CHANNELS` (optional): channels where the bot is a moderator (rate limits)
 - `TWITCH_DEBUG` (optional): `true`/`false`
 - `TF_CONFIG_PATH`: custom path to `config.json`
-- `TF_INTEGRATION_GAME_FILES`: folder shared with the game mod (contains `requests.txt`, `gameState.json`, and response files). If unset or empty, the bot uses `~/.transport_fever`, matching the game mod.
+- `TF_INTEGRATION_GAME_FILES`: folder shared with the game mod (contains `requests_<save_uuid>.txt`, `gameState.json`, and response files). If unset or empty, the bot uses `~/.transport_fever`, matching the game mod.
 - `TF_ENABLE_TWITCH_BOT`: set to `false` to disable starting the bot
 - `TF_DISABLE_RATE_LIMITS`: set to `true` to disable rate limiting
 - `TF_REQUEST_QUEUE_DELAYS_MS` (optional): per-request delays (e.g. `TOWN=5000,COMPANY=0,LINE=0,VEHICLE=0`). Requests with `0` delay are sent immediately; delayed types are queued FIFO.
@@ -180,5 +180,18 @@ Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a 
 ## File protocol (with the game mod)
 
 - Shared folder: `TF_INTEGRATION_GAME_FILES` when set and non-empty, otherwise `~/.transport_fever`; if no home folder is available, `<temp>/transport_fever`.
-- Bot writes: `#{order_id}.lua` (Lua `return` table with `schema_version = 1`) and appends `order_id` to `requests.txt`.
+- Bot writes: `#{order_id}.lua` (Lua `return` table with `schema_version = 1`) and appends `order_id` to `requests_<save_uuid>.txt`.
 - Mod writes: `#{order_id}.json` responses; the bot reads, replies in chat, then deletes the response file (and the request `.lua` on completion).
+
+Each save has an independent request index. Loading another save leaves its pending
+requests intact; returning to that save resumes them. The client removes an index
+entry after consuming a terminal response (success or permanent failure), while
+pending responses retain the entry. Queue replacement is atomic and serialized
+with submissions within the client. Run one client per shared game-files folder.
+Both the mod and client must be updated together. The old `requests.txt` is no
+longer read; existing legacy entries are not migrated automatically. Inactive save
+queues are retained, with no automatic expiration.
+
+On client startup, existing per-save indexes are recovered for cleanup. Terminal
+responses for those recovered requests are removed without replaying chat messages
+(the original channel routing is not persisted). Pending requests remain queued.

@@ -36,7 +36,7 @@ defmodule TF2Client.BotTest do
     after_ids = RequestTracker.pending_ids()
     assert after_ids == before_ids
 
-    requests_file = Path.join(dir, "requests.txt")
+    requests_file = Path.join(dir, "requests_save-123.txt")
     refute File.exists?(requests_file)
   end
 
