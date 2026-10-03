@@ -130,30 +130,59 @@ defmodule TF2Client.Web.Status do
   def game_status do
     path = GameBridge.game_state_path()
 
-    case File.stat(path, time: :posix) do
-      {:ok, %File.Stat{mtime: mtime_sec}} ->
-        now_sec = System.os_time(:second)
-        age_seconds = max(0, now_sec - mtime_sec)
-        save_uuid = read_save_uuid()
-        status = if age_seconds > @game_stale_threshold_seconds, do: "stale", else: "connected"
+    with {:ok, %File.Stat{mtime: mtime_sec}} <- File.stat(path, time: :posix),
+         {:ok, save_uuid} <- GameBridge.read_save_uuid() do
+      age_seconds = max(0, System.os_time(:second) - mtime_sec)
 
-        %{
-          connected: true,
-          status: status,
-          game_state_path: path,
-          save_uuid: save_uuid,
-          last_updated_seconds_ago: age_seconds
-        }
-
-      {:error, _reason} ->
-        %{
-          connected: false,
-          status: "waiting_for_game",
-          game_state_path: path,
-          save_uuid: nil,
-          last_updated_seconds_ago: nil
-        }
+      %{
+        connected: true,
+        status: game_freshness(age_seconds),
+        game_state_path: path,
+        save_uuid: save_uuid,
+        last_updated_seconds_ago: age_seconds,
+        error_code: nil,
+        error_message: nil
+      }
+    else
+      {:error, reason} -> game_error(path, reason)
     end
+  end
+
+  defp game_freshness(age_seconds) when age_seconds > @game_stale_threshold_seconds, do: "stale"
+  defp game_freshness(_age_seconds), do: "connected"
+
+  defp game_error(path, {:file_error, reason}), do: game_error(path, reason)
+  defp game_error(path, :game_state_missing), do: game_error(path, :enoent)
+
+  defp game_error(path, reason) do
+    {status, message} = game_error_details(reason)
+
+    %{
+      connected: false,
+      status: status,
+      game_state_path: path,
+      save_uuid: nil,
+      last_updated_seconds_ago: nil,
+      error_code: Atom.to_string(reason),
+      error_message: message
+    }
+  end
+
+  defp game_error_details(:enoent) do
+    {"waiting_for_game",
+     "gameState.json was not found. Load a save with the mod enabled and check the exact filename and configured folder."}
+  end
+
+  defp game_error_details(:game_state_invalid) do
+    {"invalid_game_state", "gameState.json must contain a valid JSON object. Wait for the mod to update it."}
+  end
+
+  defp game_error_details(:save_uuid_missing) do
+    {"invalid_game_state", "gameState.json is missing a non-empty save_uuid. Load a save with the mod enabled."}
+  end
+
+  defp game_error_details(reason) do
+    {"file_error", "Cannot access gameState.json: #{:file.format_error(reason)}."}
   end
 
   def toggle_bot(channel \\ nil) do
@@ -242,13 +271,6 @@ defmodule TF2Client.Web.Status do
     case Config.load() do
       {:ok, %Config{} = config} -> config
       _ -> %Config{}
-    end
-  end
-
-  defp read_save_uuid do
-    case GameBridge.read_save_uuid() do
-      {:ok, uuid} -> uuid
-      _ -> nil
     end
   end
 

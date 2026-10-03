@@ -89,6 +89,76 @@ defmodule TF2Client.Web.StatusTest do
       assert status.status == "waiting_for_game"
       assert status.save_uuid == nil
       assert status.last_updated_seconds_ago == nil
+      assert status.game_state_path == @game_state_file
+      assert status.error_code == "enoent"
+      assert status.error_message =~ "not found"
+    end
+
+    test "reports a filesystem error when the configured folder is a file" do
+      File.write!(@game_state_file, "not a directory")
+      System.put_env("TF_INTEGRATION_GAME_FILES", @game_state_file)
+      path = Path.join(@game_state_file, "gameState.json")
+      assert {:error, reason} = File.stat(path)
+
+      status = Status.game_status()
+      assert status.connected == false
+      assert status.status == "file_error"
+      assert status.game_state_path == path
+      assert status.error_code == Atom.to_string(reason)
+      assert status.error_message =~ to_string(:file.format_error(reason))
+    end
+
+    @tag skip: match?({:win32, _}, :os.type())
+    test "reports permission denied instead of a missing file" do
+      File.write!(@game_state_file, ~s({"save_uuid":"save-123"}))
+      File.chmod!(@game_state_file, 0o000)
+
+      try do
+        status = Status.game_status()
+        assert status.connected == false
+        assert status.status == "file_error"
+        assert status.error_code == "eacces"
+        assert status.error_message =~ "permission denied"
+      after
+        File.chmod!(@game_state_file, 0o600)
+      end
+    end
+
+    test "reports an empty game state as invalid" do
+      File.write!(@game_state_file, "")
+
+      status = Status.game_status()
+      assert status.connected == false
+      assert status.status == "invalid_game_state"
+      assert status.error_code == "game_state_invalid"
+      assert status.error_message =~ "valid JSON object"
+    end
+
+    test "reports malformed JSON as invalid" do
+      File.write!(@game_state_file, "{broken")
+      assert %{status: "invalid_game_state", error_code: "game_state_invalid"} = Status.game_status()
+    end
+
+    test "rejects JSON that is not an object" do
+      File.write!(@game_state_file, "[]")
+      assert %{status: "invalid_game_state", error_code: "game_state_invalid"} = Status.game_status()
+    end
+
+    test "reports missing save identifiers" do
+      File.write!(@game_state_file, "{}")
+      assert %{status: "invalid_game_state", error_code: "save_uuid_missing"} = Status.game_status()
+    end
+
+    test "reports empty save identifiers" do
+      File.write!(@game_state_file, ~s({"save_uuid":""}))
+      assert %{status: "invalid_game_state", error_code: "save_uuid_missing"} = Status.game_status()
+    end
+
+    test "recovers after the mod replaces invalid state with valid data" do
+      File.write!(@game_state_file, "")
+      assert %{connected: false} = Status.game_status()
+      File.write!(@game_state_file, ~s({"save_uuid":"save-123"}))
+      assert %{connected: true, error_code: nil, error_message: nil} = Status.game_status()
     end
 
     test "returns connected when gameState.json is recently updated" do

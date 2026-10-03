@@ -552,11 +552,20 @@
           gamePrimary.textContent = "Linked to Game";
           gameSubtext.textContent = "gameState.json updated " + ago;
         }
+      } else if (data.game?.error_code && data.game.status !== "waiting_for_game") {
+        gameBadge.className = "badge badge-warning";
+        gameBadge.textContent = "Error";
+        gamePrimary.textContent = data.game.status === "invalid_game_state"
+          ? "Invalid Game State"
+          : "Game File Error";
+        gameSubtext.textContent = data.game.error_message + " (" + data.game.error_code + ")";
       } else {
         gameBadge.className = "badge badge-muted";
         gameBadge.textContent = "Waiting";
         gamePrimary.textContent = "Waiting for Game";
-        gameSubtext.textContent = "Load a Transport Fever save with the mod enabled";
+        gameSubtext.textContent = data.game?.error_message
+          ? data.game.error_message + " (" + data.game.error_code + ")"
+          : "Load a Transport Fever save with the mod enabled";
       }
 
       // 4. Purchases Button

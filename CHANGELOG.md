@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 - 2026-10-03
+
+### Fixed
+
+- Show filesystem errors in the dashboard and status API, distinguishing missing files from other access failures. Keep the resolved game-state path in the API only to avoid exposing local usernames on the dashboard.
+- Report invalid JSON and missing save identifiers instead of showing a misleading game connection.
+
 ## 1.0.1 - 2026-10-03
 
 ### Fixed

@@ -100,6 +100,7 @@ iex -S mix
 #### Streamer Control Panel (`http://localhost:4000`)
 
 When the bot runs, it automatically serves a lightweight Streamer Control Panel at `http://localhost:4000`:
+- **Game File Diagnostics**: The control panel reports missing files, filesystem errors (such as permission denied), invalid JSON, and missing save identifiers. The full path is kept off the dashboard to avoid exposing local usernames while streaming. Diagnostic details are available as `game.game_state_path`, `game.error_code`, and `game.error_message` at `/api/status`. A connected state requires valid JSON with a non-empty `save_uuid`.
 - **Live Status Badges**: Real-time indicators for Twitch Chat connection, Bot Active/Standby state, and Transport Fever game mod heartbeat (`gameState.json`).
 - **One-Click Bot Toggle**: Turn the bot active (`!tfon`) or standby (`!tfoff`).
 - **Purchases Toggle**: Pause or resume in-game company claims, lines, towns, and vehicle purchases (`!pause all` / `!resume all`).

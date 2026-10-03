@@ -49,6 +49,38 @@ defmodule TF2Client.Web.RouterTest do
     assert body["channel"] == @test_channel
   end
 
+  test "GET /api/status exposes game file diagnostics" do
+    previous_dir = System.get_env("TF_INTEGRATION_GAME_FILES")
+    dir = Path.join(System.tmp_dir!(), "missing-game-#{System.unique_integer([:positive])}")
+    System.put_env("TF_INTEGRATION_GAME_FILES", dir)
+
+    on_exit(fn ->
+      case previous_dir do
+        nil -> System.delete_env("TF_INTEGRATION_GAME_FILES")
+        value -> System.put_env("TF_INTEGRATION_GAME_FILES", value)
+      end
+    end)
+
+    response =
+      :get
+      |> conn("/api/status")
+      |> Router.call(@opts)
+
+    assert response.status == 200
+    path = Path.join(dir, "gameState.json")
+
+    assert %{
+             "game" => %{
+               "status" => "waiting_for_game",
+               "game_state_path" => ^path,
+               "error_code" => "enoent",
+               "error_message" => message
+             }
+           } = Jason.decode!(response.resp_body)
+
+    assert message =~ "not found"
+  end
+
   test "POST /api/bot/toggle toggles bot state" do
     assert ChatbotState.enabled?(@test_channel) == false
 
