@@ -99,7 +99,7 @@ defmodule TF2Client.SetupWizardTest do
   end
 
   test "ensure_configured/1 successfully saves configuration with provided inputs" do
-    inputs = "my_stream_channel\nmy_bot_user\nmy_client_id\nmy_client_secret\n\n"
+    inputs = "2\nmy_stream_channel\nmy_bot_user\nmy_client_id\nmy_client_secret\noauth:manual_token\n"
     {:ok, string_io} = StringIO.open(inputs)
     previous_leader = Process.group_leader()
     Process.group_leader(self(), string_io)
@@ -115,6 +115,9 @@ defmodule TF2Client.SetupWizardTest do
       assert config.bot_user == "my_bot_user"
       assert config.client_id == "my_client_id"
       assert config.client_secret == "my_client_secret"
+      assert config.bot_oauth == "oauth:manual_token"
+      assert {:ok, saved_config} = Config.load(test_config_path)
+      assert saved_config.bot_oauth == "oauth:manual_token"
       assert File.exists?(test_config_path)
     after
       Process.group_leader(self(), previous_leader)
@@ -125,7 +128,7 @@ defmodule TF2Client.SetupWizardTest do
   end
 
   test "ensure_configured/1 successfully saves minimal configuration with only channel name and defaults" do
-    inputs = "my_stream_channel\n\n\n\n\n"
+    inputs = "\nmy_stream_channel\n\n"
     {:ok, string_io} = StringIO.open(inputs)
     previous_leader = Process.group_leader()
     Process.group_leader(self(), string_io)
@@ -141,12 +144,116 @@ defmodule TF2Client.SetupWizardTest do
       assert config.bot_user == "my_stream_channel"
       assert config.client_id == nil
       assert config.client_secret == nil
+      assert config.bot_oauth == nil
+      {_input, output} = StringIO.contents(string_io)
+      assert output =~ "Log in to Twitch as my_stream_channel"
+      refute output =~ "Twitch Client ID (optional"
+      refute output =~ "Twitch Client Secret (optional"
+      refute output =~ "Twitch Bot OAuth IRC token (optional"
       assert File.exists?(test_config_path)
     after
       Process.group_leader(self(), previous_leader)
       StringIO.close(string_io)
       System.delete_env("TF_CONFIG_PATH")
       File.rm_rf(test_dir)
+    end
+  end
+
+  @tag :tmp_dir
+  test "browser selection retries invalid choices and replaces manual credentials", %{tmp_dir: tmp_dir} do
+    config_path = Path.join(tmp_dir, "config.json")
+    previous_path = System.get_env("TF_CONFIG_PATH")
+    System.put_env("TF_CONFIG_PATH", config_path)
+
+    existing_config = %Config{
+      channels: ["streamer"],
+      bot_user: "separate_bot",
+      client_id: "custom_client",
+      client_secret: "custom_secret",
+      bot_oauth: "oauth:old_token",
+      redirect_uri: "http://localhost:9999/custom",
+      debug: true
+    }
+
+    try do
+      output =
+        ExUnit.CaptureIO.capture_io("invalid\n1\n\n\n", fn ->
+          assert {:ok, config} = SetupWizard.run(existing_config)
+          assert config.channels == ["streamer"]
+          assert config.bot_user == "separate_bot"
+          assert config.client_id == nil
+          assert config.client_secret == nil
+          assert config.bot_oauth == nil
+          assert config.redirect_uri == %Config{}.redirect_uri
+          assert config.debug
+          saved = Jason.decode!(File.read!(config_path))
+          assert saved["bot_user"] == "separate_bot"
+          assert saved["debug"]
+          refute Map.has_key?(saved, "client_id")
+          refute Map.has_key?(saved, "client_secret")
+          refute Map.has_key?(saved, "bot_oauth")
+        end)
+
+      assert output =~ "Please enter 1 for browser authentication or 2 for manual configuration."
+      assert output =~ "Log in to Twitch as separate_bot"
+    after
+      case previous_path do
+        nil -> System.delete_env("TF_CONFIG_PATH")
+        value -> System.put_env("TF_CONFIG_PATH", value)
+      end
+    end
+  end
+
+  @tag :tmp_dir
+  test "manual setup preserves existing values when optional fields are skipped", %{tmp_dir: tmp_dir} do
+    config_path = Path.join(tmp_dir, "config.json")
+    previous_path = System.get_env("TF_CONFIG_PATH")
+    System.put_env("TF_CONFIG_PATH", config_path)
+
+    existing_config = %Config{
+      channels: ["streamer"],
+      bot_user: "separate_bot",
+      client_id: "custom_client",
+      client_secret: "custom_secret",
+      bot_oauth: "oauth:existing_token"
+    }
+
+    try do
+      ExUnit.CaptureIO.capture_io("2\n\n\n\n\n\n", fn ->
+        assert {:ok, ^existing_config} = SetupWizard.run(existing_config)
+        assert {:ok, ^existing_config} = Config.load(config_path)
+      end)
+    after
+      case previous_path do
+        nil -> System.delete_env("TF_CONFIG_PATH")
+        value -> System.put_env("TF_CONFIG_PATH", value)
+      end
+    end
+  end
+
+  @tag :tmp_dir
+  test "input ending partway through either branch does not save configuration", %{tmp_dir: tmp_dir} do
+    config_path = Path.join(tmp_dir, "config.json")
+    previous_path = System.get_env("TF_CONFIG_PATH")
+    System.put_env("TF_CONFIG_PATH", config_path)
+
+    try do
+      ExUnit.CaptureIO.capture_io("1\nstreamer\n", fn ->
+        assert {:error, :eof} = SetupWizard.run(%Config{})
+      end)
+
+      refute File.exists?(config_path)
+
+      ExUnit.CaptureIO.capture_io("2\nstreamer\n\n", fn ->
+        assert {:error, :eof} = SetupWizard.run(%Config{})
+      end)
+
+      refute File.exists?(config_path)
+    after
+      case previous_path do
+        nil -> System.delete_env("TF_CONFIG_PATH")
+        value -> System.put_env("TF_CONFIG_PATH", value)
+      end
     end
   end
 end

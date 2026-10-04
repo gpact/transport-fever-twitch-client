@@ -62,10 +62,11 @@ defmodule TF2Client.Web.Server do
     caller = Keyword.get(opts, :caller)
     port = resolve_port(opts)
     ref = Keyword.get(opts, :ref, @ref)
+    start_twitch = Keyword.get(opts, :start_twitch, &TF2Client.Application.ensure_twitch_started/0)
 
     case Plug.Cowboy.http(TF2Client.Web.Router, [], port: port, ref: ref, ip: {127, 0, 0, 1}) do
       {:ok, _pid} ->
-        {:ok, %{caller: caller, port: port, ref: ref}}
+        {:ok, %{caller: caller, port: port, ref: ref, start_twitch: start_twitch}}
 
       {:error, :eaddrinuse} ->
         {:error, :eaddrinuse}
@@ -88,22 +89,26 @@ defmodule TF2Client.Web.Server do
     {:reply, :ok, %{state | caller: caller}}
   end
 
-  def handle_call({:deliver_code, code}, _from, %{caller: caller} = state) do
+  def handle_call({:deliver_code, code}, _from, %{caller: caller, start_twitch: start_twitch} = state) do
     case valid_string?(code) do
       true ->
-        handle_code_delivery(caller, code)
-        {:reply, :ok, state}
+        handle_code_delivery(caller, code, start_twitch)
+        {:reply, :ok, %{state | caller: nil}}
 
       false ->
         {:reply, {:error, :invalid_code}, state}
     end
   end
 
-  def handle_call({:deliver_token, %{access_token: token} = data}, _from, %{caller: caller} = state) do
+  def handle_call(
+        {:deliver_token, %{access_token: token} = data},
+        _from,
+        %{caller: caller, start_twitch: start_twitch} = state
+      ) do
     case valid_string?(token) do
       true ->
-        handle_token_delivery(caller, data)
-        {:reply, :ok, state}
+        handle_token_delivery(caller, data, start_twitch)
+        {:reply, :ok, %{state | caller: nil}}
 
       false ->
         {:reply, {:error, :invalid_token}, state}
@@ -114,23 +119,35 @@ defmodule TF2Client.Web.Server do
     {:reply, {:error, :invalid_token}, state}
   end
 
-  defp handle_code_delivery(caller, code) when is_pid(caller) do
+  defp handle_code_delivery(caller, code, _start_twitch) when is_pid(caller) do
     send(caller, {:twitch_oauth_code, code})
   end
 
-  defp handle_code_delivery(_no_caller, code) do
+  defp handle_code_delivery(_no_caller, code, start_twitch) do
+    Task.start(fn -> exchange_code_and_start_twitch(code, start_twitch) end)
+  end
+
+  defp exchange_code_and_start_twitch(code, start_twitch) do
     try do
       tokens = TokenRefresher.exchange_code_for_tokens!(code)
       store = TokenStore.default()
       store.save(tokens)
-      TF2Client.Application.ensure_twitch_started()
+      start_twitch.()
     rescue
       e ->
         Logger.error("Failed to exchange OAuth code: #{Exception.message(e)}")
     end
   end
 
-  defp handle_token_delivery(caller, %{access_token: token} = data) do
+  defp handle_token_delivery(caller, data, _start_twitch) when is_pid(caller) do
+    send(caller, {:twitch_oauth_token, data})
+  end
+
+  defp handle_token_delivery(_no_caller, data, start_twitch) do
+    Task.start(fn -> save_token_and_start_twitch(data, start_twitch) end)
+  end
+
+  defp save_token_and_start_twitch(%{access_token: token} = data, start_twitch) do
     expires_in = Map.get(data, :expires_in) || @default_token_lifespan_seconds
     now = System.os_time(:second)
 
@@ -142,11 +159,7 @@ defmodule TF2Client.Web.Server do
 
     store = TokenStore.default()
     store.save(token_map)
-    TF2Client.Application.ensure_twitch_started()
-
-    if is_pid(caller) do
-      send(caller, {:twitch_oauth_token, data})
-    end
+    start_twitch.()
   end
 
   defp resolve_port(opts) do

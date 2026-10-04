@@ -89,6 +89,7 @@ defmodule TF2Client.Config do
       "debug" => config.debug,
       "client_id" => config.client_id,
       "client_secret" => config.client_secret,
+      "bot_oauth" => config.bot_oauth,
       "redirect_uri" => config.redirect_uri,
       "disable_rate_limits" => config.disable_rate_limits,
       "enable_bot" => config.enable_bot,

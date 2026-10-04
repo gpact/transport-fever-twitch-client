@@ -15,7 +15,7 @@ It connects to Twitch chat via `tmi`, writes request `.lua` files for the game m
 
 The bot comes pre-configured with default credentials for seamless 1-click browser authorization. **You do not need to register a Twitch Developer application.**
 
-When running the bot for the first time, simply enter your Twitch channel name. The bot will automatically open your web browser, ask you to log in with Twitch, and connect immediately!
+When running the bot for the first time, press Enter to choose **Browser authentication (recommended)**, enter your Twitch username, then press Enter to use the same account for the bot. The bot will automatically open your web browser, ask you to log in with Twitch, and connect immediately!
 
 *(Optional for Developers)*: If you prefer to manage your own Twitch application, you can still register one at `https://dev.twitch.tv/console/apps` (set OAuth Redirect URL to `http://localhost:4000/oauth/callback`) and configure your custom `client_id` and `client_secret`.
 
@@ -27,7 +27,14 @@ TF2Client supports three ways to configure settings (evaluated in order of prece
 3. **Interactive Setup Wizard** (prompts you on first launch if unconfigured)
 
 #### Quick Setup via Interactive Wizard
-On first launch, including double-clicking the bundled Windows executable, the bot starts setup automatically when the channel or bot username is missing. After saving your settings, it continues to Twitch browser authorization if needed. Later launches reuse your settings.
+On first launch, including double-clicking the bundled Windows executable, the bot starts setup automatically when the channel or bot username is missing. After saving your settings, it continues to Twitch browser authorization if needed. Later launches reuse your settings. Before connecting to chat, the bot validates the token and checks that it belongs to the configured bot username and grants chat access. Rejected saved credentials trigger browser authorization again; temporary validation failures keep saved credentials and report an error. Invalid manually supplied tokens must be updated through setup.
+
+The wizard offers two paths:
+
+- **Browser authentication (default):** only your Twitch username is required. You can optionally use a separate bot account; sign in as that account when Twitch opens. No Client ID, Client Secret, or token entry is needed. Selecting this path replaces manual credentials with the built-in application defaults.
+- **Manual configuration (advanced):** configure your own Client ID and optional Client Secret, or supply an existing OAuth IRC token. Press Enter to retain existing values or skip optional fields. Without an IRC token, browser authorization is used when needed.
+
+Running the standalone `setup` command saves settings and exits. Start the executable normally afterward to connect and authorize if needed.
 
 If setup is cancelled, input is unavailable, or the configuration cannot be read, startup stops with an error. Open a terminal and run the setup command below, or provide a valid configuration file. Automatic setup is skipped in tests, IEx, and when the bot is explicitly disabled.
 
@@ -68,8 +75,8 @@ mix tf2.config
 - `TWITCH_BOT_USER`: bot Twitch username (lowercase recommended)
 - `TWITCH_BOT_OAUTH` (optional): bot OAuth token for IRC (must start with `oauth:`); if unset, uses the stored OAuth tokens
 - `TWITCH_CHANNELS`: comma/space separated list of channels to join (no `#`)
-- `TWITCH_CLIENT_ID`: Twitch OAuth client id (required for OAuth authorization and refresh)
-- `TWITCH_CLIENT_SECRET`: Twitch OAuth client secret (required for OAuth authorization and refresh)
+- `TWITCH_CLIENT_ID` (optional): your own Twitch application client ID; uses the built-in application if unset
+- `TWITCH_CLIENT_SECRET` (optional): secret for your own Twitch application; not needed for the default browser login
 - `TWITCH_REDIRECT_URI` (optional): OAuth redirect URI (default: `http://localhost:4000/oauth/callback`)
 - `TWITCH_MOD_CHANNELS` (optional): channels where the bot is a moderator (rate limits)
 - `TWITCH_DEBUG` (optional): `true`/`false`
