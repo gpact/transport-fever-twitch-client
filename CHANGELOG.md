@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0 - 2026-10-04
+
+### Changed
+
+- Improved the user's Twitch authorization workflow.
+
 ## 1.0.2 - 2026-10-03
 
 ### Fixed

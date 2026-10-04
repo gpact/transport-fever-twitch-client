@@ -4,7 +4,7 @@ defmodule TF2Client.MixProject do
   def project do
     [
       app: :tf2_client,
-      version: "1.0.2",
+      version: "1.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
