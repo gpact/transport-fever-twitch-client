@@ -1,5 +1,5 @@
-defmodule Mix.Tasks.Tf2.Sim do
-  @shortdoc "Interactive local simulator for TF2Client chat commands"
+defmodule Mix.Tasks.Tf.Sim do
+  @shortdoc "Interactive local simulator for Transport Fever chat commands"
 
   use Mix.Task
 
@@ -10,6 +10,7 @@ defmodule Mix.Tasks.Tf2.Sim do
   alias TF2Client.Requests
   alias TF2Client.ResponsePoller
   alias TF2Client.Sim.Mod
+  alias TF2Client.TransportFever
 
   @default_script_delay_ms 250
 
@@ -24,7 +25,8 @@ defmodule Mix.Tasks.Tf2.Sim do
 
     {:ok, _} = start_children()
 
-    IO.puts("TF2Client sim started.")
+    version = TransportFever.version()
+    IO.puts("Transport Fever simulator started (version: #{version}).")
     IO.puts("Requests dir: #{GameBridge.requests_dir()}")
     IO.puts("Type :help for simulator commands. Type chat like: alice: !claim My Co")
 
@@ -79,7 +81,7 @@ defmodule Mix.Tasks.Tf2.Sim do
         before = MapSet.new(RequestTracker.pending_ids())
         result = Requests.handle_chat_command(command, sender, state.channel)
         after_ids = MapSet.new(RequestTracker.pending_ids())
-        new_ids = MapSet.difference(after_ids, before) |> MapSet.to_list()
+        new_ids = MapSet.to_list(MapSet.difference(after_ids, before))
 
         case result do
           {:reply, reply} when is_binary(reply) ->
@@ -90,26 +92,26 @@ defmodule Mix.Tasks.Tf2.Sim do
         end
 
         order_id = Enum.at(new_ids, 0)
-
-        state =
-          if is_binary(order_id) do
-            state = %{state | last_order_id: order_id}
-
-            if state.auto do
-              tracked = RequestTracker.get(order_id) || %{}
-              username = tracked[:username] || sender
-              type = tracked[:type] || extract_type_from_reply(result) || "UNKNOWN"
-              auto_complete(order_id, username, type)
-            end
-
-            state
-          else
-            state
-          end
-
-        state
+        maybe_track_order(state, order_id, sender, result)
     end
   end
+
+  defp maybe_track_order(state, order_id, sender, result) when is_binary(order_id) do
+    state = %{state | last_order_id: order_id}
+    maybe_auto_complete(state.auto, order_id, sender, result)
+    state
+  end
+
+  defp maybe_track_order(state, _order_id, _sender, _result), do: state
+
+  defp maybe_auto_complete(true, order_id, sender, result) do
+    tracked = RequestTracker.get(order_id) || %{}
+    username = Map.get(tracked, :username, sender)
+    type = Map.get(tracked, :type) || extract_type_from_reply(result) || "UNKNOWN"
+    auto_complete(order_id, username, type)
+  end
+
+  defp maybe_auto_complete(false, _order_id, _sender, _result), do: :ok
 
   defp handle_sim_command("help", state) do
     IO.puts("""
@@ -304,8 +306,9 @@ defmodule Mix.Tasks.Tf2.Sim do
   defp ensure_game_state do
     path = GameBridge.game_state_path()
 
-    if not File.exists?(path) do
-      File.write!(path, ~s({"save_uuid":"sim-save"}\n))
+    case File.exists?(path) do
+      true -> :ok
+      false -> File.write!(path, ~s({"save_uuid":"sim-save"}\n))
     end
   end
 
