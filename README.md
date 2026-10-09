@@ -1,13 +1,15 @@
-# TF2Client
+# Transport Fever Twitch Client
 
 Twitch chatbot for a Transport Fever Twitch integration mod.
 
-It connects to Twitch chat via `tmi`, writes request `.lua` files for the game mod to process, and polls `*.json` response files to reply in chat.
+It connects to Twitch chat via Twitch IRC, writes request files for the game mod to process, and replies in chat when the mod completes actions.
 
 > [!IMPORTANT]
 > **Windows users: install the Visual C++ runtime before launching the client.**
 > The bundled executable requires the [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vc14/vc_redist.x64.exe). If Windows shows `VCRUNTIME140.dll was not found`, install this package, then launch the client again.
 > Windows 10 build 1511 or newer is required. You do not need Elixir or Erlang installed.
+
+Standalone executables are available for **Windows**, **Linux**, and **macOS**. No runtime dependencies or programming environments are required.
 
 ## Setup
 
@@ -17,11 +19,11 @@ The bot comes pre-configured with default credentials for seamless 1-click brows
 
 When running the bot for the first time, press Enter to choose **Browser authentication (recommended)**, enter your Twitch username, then press Enter to use the same account for the bot. The bot will automatically open your web browser, ask you to log in with Twitch, and connect immediately!
 
-*(Optional for Developers)*: If you prefer to manage your own Twitch application, you can still register one at `https://dev.twitch.tv/console/apps` (set OAuth Redirect URL to `http://localhost:4000/oauth/callback`) and configure your custom `client_id` and `client_secret`.
+*(Advanced / Custom Application)*: If you prefer to manage your own Twitch Developer application rather than the default credentials, you can register one at `https://dev.twitch.tv/console/apps` (OAuth Redirect URL: `http://localhost:4000/oauth/callback`) and configure custom `client_id` and `client_secret` settings. See [DEVELOPMENT.md](./DEVELOPMENT.md) for more details.
 
 ### 2. Configuration
 
-TF2Client supports three ways to configure settings (evaluated in order of precedence):
+The client supports three ways to configure settings (evaluated in order of precedence):
 1. **Environment variables** (highest priority, great for Docker/headless environments)
 2. **`config.json` file** (checked in `./config.json` or `~/.config/transport_fever/config.json`)
 3. **Interactive Setup Wizard** (prompts you on first launch if unconfigured)
@@ -38,14 +40,14 @@ Running the standalone `setup` command saves settings and exits. Start the execu
 
 If setup is cancelled, input is unavailable, or the configuration cannot be read, startup stops with an error. Open a terminal and run the setup command below, or provide a valid configuration file. Automatic setup is skipped in tests, IEx, and when the bot is explicitly disabled.
 
-You can also run setup manually:
+You can also run setup manually at any time:
 
 ```bash
-# On Linux / macOS:
-mix tf2.setup
+# On Windows:
+.\tf_client.exe setup
 
-# On Windows executable:
-.\tf2_client_windows.exe setup
+# On Linux or macOS:
+./tf_client setup
 ```
 
 #### Configuration File (`config.json`)
@@ -64,11 +66,14 @@ Copy `config.example.json` to `config.json` in the same directory as the executa
 ```
 
 To inspect your current configuration and token status:
-# On Linux / macOS:
-mix tf2.config
 
-# On Windows executable:
-.\tf2_client_windows.exe config
+```bash
+# On Windows:
+.\tf_client.exe config
+
+# On Linux / macOS:
+./tf_client config
+```
 
 #### Environment variables (optional overrides)
 
@@ -91,14 +96,12 @@ mix tf2.config
 Start the game with the mod enabled so it can create/update `gameState.json` in the shared game files folder, then run:
 
 ```bash
-# On Linux / macOS (foreground):
-mix run --no-halt
+# On Windows:
+.\tf_client.exe
+# (or double-click the executable)
 
-# Or interactive IEx shell:
-iex -S mix
-
-# On Windows executable:
-.\tf2_client_windows.exe
+# On Linux or macOS:
+./tf_client
 ```
 
 - **Seamless Auto-Authorization**: If tokens are not present, the bot automatically opens your browser to authorize with Twitch, saves the credentials to `~/.config/transport_fever/twitch_tokens.json`, and connects to chat immediately without requiring a restart!
@@ -116,49 +119,23 @@ When the bot runs, it automatically serves a lightweight Streamer Control Panel 
 
 #### Manual OAuth Bootstrap (Optional)
 If you wish to pre-authorize or re-authorize independently of running the bot:
+
 ```bash
-.\tf2_client_windows.exe oauth.bootstrap
-# or from source:
-mix twitch.oauth.bootstrap
+# On Windows:
+.\tf_client.exe oauth.bootstrap
+
+# On Linux / macOS:
+./tf_client oauth.bootstrap
 ```
 
-### Packaged Windows executable
+### Available Executable Commands
 
-Burrito is configured with a Windows x64 target named `windows`.
+- `<executable>` → start the bot (prompts setup if unconfigured, auto-authorizes if needed)
+- `<executable> setup` → run interactive configuration wizard
+- `<executable> config` → show current configuration and token status
+- `<executable> oauth.bootstrap` → one-time manual OAuth bootstrap
 
-Build from Linux, macOS, or Windows through WSL:
-
-`MIX_ENV=prod BURRITO_TARGET=windows mix release`
-
-The distributable executable is written to:
-
-`burrito_out/tf2_client_windows.exe`
-
-Burrito production binaries unpack the embedded release on first run and reuse that unpacked payload for later runs of the same app version. If you rebuild with code changes but keep the same `version` in `mix.exs`, Windows may keep running the previously unpacked code. For normal releases, bump the project version before building. For local verification of a rebuilt same-version binary, run:
-
-`.\tf2_client_windows.exe maintenance uninstall`
-
-Then start the executable again so Burrito unpacks the new payload. You can inspect the unpacked runtime path with:
-
-`.\tf2_client_windows.exe maintenance directory`
-
-Build machine requirements:
-
-- `zig` 0.15.2
-- `xz`
-- `7z` or `7zz` for Windows targets
-
-#### Available Packaged Commands:
-
-- `.\tf2_client_windows.exe` → start the bot (prompts setup if unconfigured, auto-authorizes if needed)
-- `.\tf2_client_windows.exe setup` → run interactive configuration wizard
-- `.\tf2_client_windows.exe config` → show current configuration and token status
-- `.\tf2_client_windows.exe oauth.bootstrap` → one-time manual OAuth bootstrap
-
-Burrito maintenance commands:
-
-- `.\tf2_client_windows.exe maintenance directory`
-- `.\tf2_client_windows.exe maintenance uninstall`
+*(Replace `<executable>` with `.\tf_client.exe` or `./tf_client` depending on your platform.)*
 
 ## Chat commands
 
@@ -181,30 +158,15 @@ Burrito maintenance commands:
 
 Valid carriers: `AIR`, `RAIL`, `ROAD`, `WATER`, `TRAM`.
 
-## Local simulator (no Twitch)
+## Game Mod Integration
 
-Run an interactive shell that simulates chat messages and prints bot replies:
+The client communicates with the Transport Fever game mod through a shared folder:
 
-`mix tf2.sim`
+- **Shared folder location:** `~/.transport_fever` by default, or the folder specified in the `TF_INTEGRATION_GAME_FILES` environment variable.
+- The game mod exports live game state (`gameState.json`) to this folder.
+- When chat commands arrive, the client writes request orders to this folder, and the game mod executes them in-game and outputs results for the bot to reply in chat.
+- Make sure both the game mod and the client are running simultaneously and pointing to the same folder.
 
-If `TF_INTEGRATION_GAME_FILES` is unset or empty, it uses a fresh temp folder and prints the path on start.
-Type `:help` in the sim for commands. Use `:play <path> [delay_ms]` to replay a script of chat lines, `:delay <ms>` to pause before the next command, and `:ratelimit off` to disable rate limiting.
+## Development
 
-## File protocol (with the game mod)
-
-- Shared folder: `TF_INTEGRATION_GAME_FILES` when set and non-empty, otherwise `~/.transport_fever`; if no home folder is available, `<temp>/transport_fever`.
-- Bot writes: `#{order_id}.lua` (Lua `return` table with `schema_version = 1`) and appends `order_id` to `requests_<save_uuid>.txt`.
-- Mod writes: `#{order_id}.json` responses; the bot reads, replies in chat, then deletes the response file (and the request `.lua` on completion).
-
-Each save has an independent request index. Loading another save leaves its pending
-requests intact; returning to that save resumes them. The client removes an index
-entry after consuming a terminal response (success or permanent failure), while
-pending responses retain the entry. Queue replacement is atomic and serialized
-with submissions within the client. Run one client per shared game-files folder.
-Both the mod and client must be updated together. The old `requests.txt` is no
-longer read; existing legacy entries are not migrated automatically. Inactive save
-queues are retained, with no automatic expiration.
-
-On client startup, existing per-save indexes are recovered for cleanup. Terminal
-responses for those recovered requests are removed without replaying chat messages
-(the original channel routing is not persisted). Pending requests remain queued.
+If you want to work with the source code, run tests, use the local chat simulator, build executables, or inspect the internal mod IPC file protocol, please see the [Development Guide](./DEVELOPMENT.md).
